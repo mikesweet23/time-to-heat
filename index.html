@@ -27,7 +27,7 @@
       background-color: var(--bg-color);
       color: var(--text-main);
       margin: 0;
-      padding: 20px 16px 40px 16px;
+      padding: 16px 16px 40px 16px;
       display: flex;
       justify-content: center;
     }
@@ -37,12 +37,12 @@
       max-width: 440px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     header {
       text-align: center;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
 
     header h1 {
@@ -58,22 +58,22 @@
       margin: 4px 0 0 0;
     }
 
-    /* Segmented Control */
+    /* Segmented Controls */
     .segmented-control {
       display: flex;
       background: #020617;
-      padding: 4px;
+      padding: 3px;
       border-radius: 12px;
       border: 1px solid var(--card-border);
     }
 
     .segmented-control button {
       flex: 1;
-      padding: 10px;
+      padding: 9px 4px;
       border: none;
       background: transparent;
       color: var(--text-muted);
-      font-size: 0.95rem;
+      font-size: 0.85rem;
       font-weight: 600;
       border-radius: 8px;
       cursor: pointer;
@@ -94,13 +94,13 @@
       padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .input-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
     }
 
     .input-label {
@@ -114,14 +114,21 @@
 
     .input-label span.value {
       color: var(--accent-blue);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+    }
+
+    .instruction-text {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 2px;
+      line-height: 1.2;
     }
 
     input[type="number"], select {
       background: #020617;
       border: 1px solid var(--card-border);
       color: var(--text-main);
-      padding: 12px;
+      padding: 10px 12px;
       border-radius: 10px;
       font-size: 1rem;
       font-weight: 600;
@@ -140,13 +147,13 @@
       border-radius: 3px;
       background: #334155;
       outline: none;
-      margin-top: 6px;
+      margin-top: 4px;
     }
 
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       background: var(--accent-blue);
       cursor: pointer;
@@ -174,15 +181,15 @@
       background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
       border: 1px solid var(--accent-blue);
       border-radius: 16px;
-      padding: 20px;
+      padding: 18px;
       text-align: center;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .result-title {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 1px;
@@ -201,6 +208,35 @@
       color: var(--text-muted);
     }
 
+    /* Instructions Accordion */
+    details {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+    }
+
+    summary {
+      font-weight: 600;
+      color: var(--accent-blue);
+      cursor: pointer;
+      outline: none;
+    }
+
+    .guide-content {
+      margin-top: 8px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .guide-content p {
+      margin: 0;
+    }
+
     .hidden {
       display: none !important;
     }
@@ -211,93 +247,98 @@
 <div class="app-container">
   <header>
     <h1>Time to Heat</h1>
-    <p>HVAC Heating & Cooling Estimator</p>
+    <p>HVAC Batch & Flow Calculator</p>
   </header>
 
-  <!-- Medium Switch: Water vs Air -->
+  <!-- 1. Medium Switch: Water vs Air -->
   <div class="segmented-control">
-    <button id="btn-water" class="active" onclick="setMedium('water')">💧 Water</button>
+    <button id="btn-water" class="active" onclick="setMedium('water')">💧 Water / Glycol</button>
     <button id="btn-air" onclick="setMedium('air')">💨 Air</button>
   </div>
 
-  <!-- Target Calculation: Time vs Power -->
+  <!-- 2. System Type Switch: Batch vs Flow -->
   <div class="segmented-control">
-    <button id="btn-solve-time" class="active" onclick="setSolveMode('time')">Solve Time</button>
-    <button id="btn-solve-power" onclick="setSolveMode('power')">Solve Power (kW)</button>
+    <button id="btn-type-batch" class="active" onclick="setSystemType('batch')">📦 Batch (Volume)</button>
+    <button id="btn-type-flow" onclick="setSystemType('flow')">🔄 Flow Rate (L/s)</button>
+  </div>
+
+  <!-- 3. Target Calculation Switch -->
+  <div class="segmented-control" id="solve-mode-control">
+    <button id="btn-solve-1" class="active" onclick="setSolveMode('mode1')">Solve Time</button>
+    <button id="btn-solve-2" onclick="setSolveMode('mode2')">Solve Power (kW)</button>
   </div>
 
   <!-- Inputs Card -->
   <div class="card">
     
-    <!-- WATER INPUTS -->
+    <!-- SYSTEM QUANTITY INPUT (Dynamic label/units) -->
+    <div class="input-group">
+      <div class="input-label">
+        <span id="qty-label">Water Volume</span>
+        <span class="value" id="qty-val-display">5,000 L</span>
+      </div>
+      <input type="number" id="system-qty" value="5000" step="10" oninput="calculate()">
+      <div class="instruction-text" id="qty-instruction">Total volume contained in the vessel or system.</div>
+    </div>
+
+    <!-- WATER SPECIFIC CONTROLS -->
     <div id="water-controls">
       <div class="input-group">
         <div class="input-label">
-          <span>Water Volume</span>
-          <span class="value" id="water-vol-val">5,000 L</span>
-        </div>
-        <input type="number" id="water-volume" value="5000" step="100" oninput="calculate()">
-      </div>
-
-      <div class="input-group" style="margin-top: 12px;">
-        <div class="input-label">
-          <span>Fluid Mix / Glycol</span>
-          <span class="value" id="glycol-val">0% Glycol (Water)</span>
+          <span>Glycol Ratio</span>
+          <span class="value" id="glycol-val">0% Glycol</span>
         </div>
         <input type="range" id="glycol-slider" min="0" max="50" step="10" value="0" oninput="calculate()">
+        <div class="instruction-text">Higher glycol reduces specific heat capacity ($c_p$) and increases density.</div>
       </div>
     </div>
 
-    <!-- AIR INPUTS -->
+    <!-- AIR SPECIFIC CONTROLS -->
     <div id="air-controls" class="hidden">
       <div class="input-group">
         <div class="input-label">
-          <span>Air Volume</span>
-          <span class="value" id="air-vol-val">500 m³</span>
-        </div>
-        <input type="number" id="air-volume" value="500" step="50" oninput="calculate()">
-      </div>
-
-      <div class="input-group" style="margin-top: 12px;">
-        <div class="input-label">
-          <span>Initial Air Temp</span>
+          <span>Initial Air Temperature</span>
           <span class="value" id="air-temp-val">20°C</span>
         </div>
         <input type="range" id="air-temp-slider" min="-10" max="40" step="5" value="20" oninput="calculate()">
+        <div class="instruction-text">Air density varies based on entering temperature.</div>
       </div>
     </div>
 
-    <!-- SHARED INPUTS -->
-    <div class="input-group">
+    <!-- DELTA T INPUT -->
+    <div id="delta-group" class="input-group">
       <div class="input-label">
-        <span>Temperature Delta (ΔT)</span>
+        <span>Temperature Rise / Drop (ΔT)</span>
         <span class="value" id="delta-val">20 °C</span>
       </div>
       <input type="number" id="delta-t" value="20" step="1" oninput="calculate()">
+      <div class="instruction-text">The temperature difference between entering and leaving conditions.</div>
     </div>
 
-    <!-- SOLVE FOR TIME: INPUT POWER -->
+    <!-- POWER INPUT (When solving for Time or Delta T) -->
     <div id="power-input-group" class="input-group">
       <div class="input-label">
-        <span>Heating/Cooling Power</span>
+        <span>Heater/Cooler Output</span>
         <span class="value">kW</span>
       </div>
       <input type="number" id="input-power" value="50" step="1" oninput="calculate()">
+      <div class="instruction-text">Thermal heating or cooling power available.</div>
     </div>
 
-    <!-- SOLVE FOR POWER: INPUT TIME -->
+    <!-- TIME INPUT (When solving for Power in Batch mode) -->
     <div id="time-input-group" class="input-group hidden">
       <div class="input-label">
         <span>Target Time (Seconds)</span>
         <span class="value" id="target-time-label">3600 s (1 hr)</span>
       </div>
       <input type="number" id="input-time" value="3600" step="60" oninput="calculate()">
+      <div class="instruction-text">Duration available to achieve the temperature change.</div>
     </div>
 
     <!-- FLUID / AIR SPEC INFO -->
     <div class="info-badge">
-      <span>Specific Heat (c<sub>p</sub>): <span class="highlight" id="cp-display">4.186 kJ/kg·°C</span></span>
-      <span>Density (ρ): <span class="highlight" id="density-display">1.00 kg/L</span></span>
+      <span>c<sub>p</sub>: <span class="highlight" id="cp-display">4.186 kJ/kg·°C</span></span>
+      <span>Density (ρ): <span class="highlight" id="density-display">1.000 kg/L</span></span>
     </div>
   </div>
 
@@ -307,13 +348,28 @@
     <div class="result-value" id="result-primary">0s</div>
     <div class="result-sub" id="result-secondary">Total Energy: 0 kWh</div>
   </div>
+
+  <!-- IN-APP QUICK INSTRUCTION GUIDE -->
+  <details>
+    <summary>📖 How to Use This App</summary>
+    <div class="guide-content">
+      <p><b>1. Select Medium:</b> Choose between Water/Glycol mix or Air.</p>
+      <p><b>2. Select System Type:</b>
+        <br>• <i>Batch:</i> For closed tanks, storage vessels, or room air volumes.
+        <br>• <i>Flow Rate (L/s):</i> For inline heaters, coils, boilers, or pump loops delivering continuous Litres per second.</p>
+      <p><b>3. Select What to Solve:</b>
+        <br>• <i>Batch Mode:</i> Calculate time required (seconds/hours) OR power required (kW).
+        <br>• <i>Flow Mode:</i> Calculate power required (kW) for a given flow OR temperature rise ($\Delta T$) produced by a heater.</p>
+    </div>
+  </details>
 </div>
 
 <script>
   let medium = 'water';
-  let solveMode = 'time';
+  let systemType = 'batch';
+  let solveMode = 'mode1'; // mode1: Time or Power; mode2: Power or DeltaT
 
-  // Specific heat & density for glycol mixes (at 20°C approx)
+  // Specific heat & density for glycol mixes at ~20°C
   const glycolData = {
     0:  { cp: 4.186, density: 1.000, name: "0% Glycol (Pure Water)" },
     10: { cp: 4.050, density: 1.012, name: "10% Glycol Mix" },
@@ -329,16 +385,77 @@
     document.getElementById('btn-air').classList.toggle('active', m === 'air');
     document.getElementById('water-controls').classList.toggle('hidden', m !== 'water');
     document.getElementById('air-controls').classList.toggle('hidden', m !== 'air');
+    
+    // Set default quantities when switching mediums
+    const qtyInput = document.getElementById('system-qty');
+    if (systemType === 'batch') {
+      qtyInput.value = (m === 'water') ? 5000 : 500;
+    } else {
+      qtyInput.value = (m === 'water') ? 2.5 : 150; // default L/s
+    }
+    
+    updateUIControls();
+    calculate();
+  }
+
+  function setSystemType(type) {
+    systemType = type;
+    document.getElementById('btn-type-batch').classList.toggle('active', type === 'batch');
+    document.getElementById('btn-type-flow').classList.toggle('active', type === 'flow');
+
+    // Update default input value when toggling system type
+    const qtyInput = document.getElementById('system-qty');
+    if (type === 'batch') {
+      qtyInput.value = (medium === 'water') ? 5000 : 500;
+    } else {
+      qtyInput.value = (medium === 'water') ? 2.5 : 150;
+    }
+
+    updateUIControls();
     calculate();
   }
 
   function setSolveMode(mode) {
     solveMode = mode;
-    document.getElementById('btn-solve-time').classList.toggle('active', mode === 'time');
-    document.getElementById('btn-solve-power').classList.toggle('active', mode === 'power');
-    document.getElementById('power-input-group').classList.toggle('hidden', mode !== 'time');
-    document.getElementById('time-input-group').classList.toggle('hidden', mode !== 'power');
+    document.getElementById('btn-solve-1').classList.toggle('active', mode === 'mode1');
+    document.getElementById('btn-solve-2').classList.toggle('active', mode === 'mode2');
+    updateUIControls();
     calculate();
+  }
+
+  function updateUIControls() {
+    const btn1 = document.getElementById('btn-solve-1');
+    const btn2 = document.getElementById('btn-solve-2');
+    const qtyLabel = document.getElementById('qty-label');
+    const qtyInst = document.getElementById('qty-instruction');
+
+    if (systemType === 'batch') {
+      btn1.innerText = "Solve Time";
+      btn2.innerText = "Solve Power (kW)";
+
+      if (medium === 'water') {
+        qtyLabel.innerText = "Water Volume (Liters)";
+        qtyInst.innerText = "Total volume in Litres contained in tank/system.";
+      } else {
+        qtyLabel.innerText = "Air Volume (m³)";
+        qtyInst.innerText = "Total air volume in cubic meters (m³).";
+      }
+
+      document.getElementById('power-input-group').classList.toggle('hidden', solveMode !== 'mode1');
+      document.getElementById('time-input-group').classList.toggle('hidden', solveMode !== 'mode2');
+      document.getElementById('delta-group').classList.remove('hidden');
+
+    } else { // Continuous Flow (L/s)
+      btn1.innerText = "Solve Power (kW)";
+      btn2.innerText = "Solve Temp Rise (ΔT)";
+
+      qtyLabel.innerText = (medium === 'water') ? "Water Flow Rate (L/s)" : "Air Flow Rate (L/s)";
+      qtyInst.innerText = "Continuous volumetric flow rate in Litres per second.";
+
+      document.getElementById('power-input-group').classList.toggle('hidden', solveMode !== 'mode2');
+      document.getElementById('time-input-group').classList.add('hidden');
+      document.getElementById('delta-group').classList.toggle('hidden', solveMode === 'mode2');
+    }
   }
 
   function formatTime(totalSeconds) {
@@ -359,79 +476,121 @@
   }
 
   function calculate() {
+    const qty = parseFloat(document.getElementById('system-qty').value) || 0;
     const deltaT = parseFloat(document.getElementById('delta-t').value) || 0;
     document.getElementById('delta-val').innerText = `${deltaT} °C`;
 
-    let massKg = 0;
     let cp = 4.186; // kJ/kg·°C
+    let densityKgL = 1.000; // kg/L
     let densityText = '';
 
     if (medium === 'water') {
-      const volLiters = parseFloat(document.getElementById('water-volume').value) || 0;
       const glycolPct = document.getElementById('glycol-slider').value;
       const data = glycolData[glycolPct];
-
       cp = data.cp;
-      massKg = volLiters * data.density;
+      densityKgL = data.density;
 
-      document.getElementById('water-vol-val').innerText = `${volLiters.toLocaleString()} L`;
       document.getElementById('glycol-val').innerText = data.name;
-      densityText = `${data.density.toFixed(3)} kg/L`;
-    } else {
-      const volM3 = parseFloat(document.getElementById('air-volume').value) || 0;
-      const initialTemp = parseFloat(document.getElementById('air-temp-slider').value);
-      
-      // Calculate air density based on ideal gas law: rho = P / (R * T)
-      // At standard atmospheric pressure: rho ≈ 353.00 / (Temp_C + 273.15)
-      const airDensity = 353.00 / (initialTemp + 273.15); // kg/m³
-      cp = 1.005; // kJ/kg·°C for air
-      massKg = volM3 * airDensity;
+      densityText = `${densityKgL.toFixed(3)} kg/L`;
+      document.getElementById('qty-val-display').innerText = (systemType === 'batch') ? `${qty.toLocaleString()} L` : `${qty} L/s`;
 
-      document.getElementById('air-vol-val').innerText = `${volM3.toLocaleString()} m³`;
+    } else {
+      const initialTemp = parseFloat(document.getElementById('air-temp-slider').value);
+      // Density of air kg/m3 = 353 / (T + 273.15)
+      const airDensityKgM3 = 353.00 / (initialTemp + 273.15); 
+      densityKgL = airDensityKgM3 / 1000; // Convert kg/m3 to kg/L
+      cp = 1.005; // kJ/kg·°C
+
       document.getElementById('air-temp-val').innerText = `${initialTemp} °C`;
-      densityText = `${airDensity.toFixed(3)} kg/m³`;
+      densityText = `${airDensityKgM3.toFixed(3)} kg/m³`;
+      document.getElementById('qty-val-display').innerText = (systemType === 'batch') ? `${qty.toLocaleString()} m³` : `${qty} L/s`;
     }
 
-    // Update specific heat display
     document.getElementById('cp-display').innerText = `${cp.toFixed(3)} kJ/kg·°C`;
     document.getElementById('density-display').innerText = densityText;
 
-    // Total Energy Q = m * c_p * deltaT  (in kJ)
-    const energyKJ = massKg * cp * deltaT;
-    const energyKWh = energyKJ / 3600;
-
-    if (solveMode === 'time') {
-      const powerKW = parseFloat(document.getElementById('input-power').value) || 0;
-      document.getElementById('result-title').innerText = "Estimated Heating Time";
-
-      if (powerKW <= 0 || energyKJ <= 0) {
-        document.getElementById('result-primary').innerText = "0s";
-        document.getElementById('result-secondary').innerText = "Total Energy: 0 kWh";
-        return;
+    // --- BATCH CALCULATIONS ---
+    if (systemType === 'batch') {
+      let massKg = 0;
+      if (medium === 'water') {
+        massKg = qty * densityKgL; // L * kg/L
+      } else {
+        const airDensityKgM3 = densityKgL * 1000;
+        massKg = qty * airDensityKgM3; // m³ * kg/m³
       }
 
-      const totalSeconds = energyKJ / powerKW;
-      document.getElementById('result-primary').innerText = formatTime(totalSeconds);
-      document.getElementById('result-secondary').innerText = `(${Math.round(totalSeconds).toLocaleString()} seconds) • ${energyKWh.toFixed(2)} kWh`;
+      const energyKJ = massKg * cp * deltaT;
+      const energyKWh = energyKJ / 3600;
 
+      if (solveMode === 'mode1') { // Solve Time
+        const powerKW = parseFloat(document.getElementById('input-power').value) || 0;
+        document.getElementById('result-title').innerText = "Estimated Heating Time";
+
+        if (powerKW <= 0 || energyKJ <= 0) {
+          document.getElementById('result-primary').innerText = "0s";
+          document.getElementById('result-secondary').innerText = "Total Energy: 0 kWh";
+          return;
+        }
+
+        const totalSeconds = energyKJ / powerKW;
+        document.getElementById('result-primary').innerText = formatTime(totalSeconds);
+        document.getElementById('result-secondary').innerText = `(${Math.round(totalSeconds).toLocaleString()} seconds) • Total: ${energyKWh.toFixed(2)} kWh`;
+
+      } else { // Solve Power
+        const targetSecs = parseFloat(document.getElementById('input-time').value) || 0;
+        document.getElementById('target-time-label').innerText = `${targetSecs} s (${formatTime(targetSecs)})`;
+        document.getElementById('result-title').innerText = "Required Power";
+
+        if (targetSecs <= 0 || energyKJ <= 0) {
+          document.getElementById('result-primary').innerText = "0 kW";
+          document.getElementById('result-secondary').innerText = "Total Energy: 0 kWh";
+          return;
+        }
+
+        const requiredKW = energyKJ / targetSecs;
+        document.getElementById('result-primary').innerText = `${requiredKW.toFixed(2)} kW`;
+        document.getElementById('result-secondary').innerText = `Total Energy Required: ${energyKWh.toFixed(2)} kWh`;
+      }
+
+    // --- CONTINUOUS FLOW CALCULATIONS (L/s) ---
     } else {
-      const targetSecs = parseFloat(document.getElementById('input-time').value) || 0;
-      document.getElementById('target-time-label').innerText = `${targetSecs} s (${formatTime(targetSecs)})`;
-      document.getElementById('result-title').innerText = "Required Power";
+      // Mass flow rate in kg/s: (L/s) * (kg/L)
+      const massFlowKgSec = qty * densityKgL;
 
-      if (targetSecs <= 0 || energyKJ <= 0) {
-        document.getElementById('result-primary').innerText = "0 kW";
-        document.getElementById('result-secondary').innerText = "Total Energy: 0 kWh";
-        return;
+      if (solveMode === 'mode1') { // Solve Power for given L/s and Delta T
+        document.getElementById('result-title').innerText = "Required Flow Power";
+
+        if (massFlowKgSec <= 0 || deltaT <= 0) {
+          document.getElementById('result-primary').innerText = "0 kW";
+          document.getElementById('result-secondary').innerText = "Mass Flow: 0 kg/s";
+          return;
+        }
+
+        // P (kW) = mass_flow (kg/s) * cp (kJ/kg°C) * deltaT (°C)
+        const powerKW = massFlowKgSec * cp * deltaT;
+        document.getElementById('result-primary').innerText = `${powerKW.toFixed(2)} kW`;
+        document.getElementById('result-secondary').innerText = `Mass Flow Rate: ${massFlowKgSec.toFixed(3)} kg/s`;
+
+      } else { // Solve Delta T for given L/s and Power
+        const powerKW = parseFloat(document.getElementById('input-power').value) || 0;
+        document.getElementById('result-title').innerText = "Achievable Temp Rise (ΔT)";
+
+        if (massFlowKgSec <= 0 || powerKW <= 0) {
+          document.getElementById('result-primary').innerText = "0 °C";
+          document.getElementById('result-secondary').innerText = "Mass Flow: 0 kg/s";
+          return;
+        }
+
+        // DeltaT = P / (mass_flow * cp)
+        const calcDeltaT = powerKW / (massFlowKgSec * cp);
+        document.getElementById('result-primary').innerText = `${calcDeltaT.toFixed(1)} °C`;
+        document.getElementById('result-secondary').innerText = `Mass Flow Rate: ${massFlowKgSec.toFixed(3)} kg/s`;
       }
-
-      const requiredKW = energyKJ / targetSecs;
-      document.getElementById('result-primary').innerText = `${requiredKW.toFixed(2)} kW`;
-      document.getElementById('result-secondary').innerText = `Total Energy Required: ${energyKWh.toFixed(2)} kWh`;
     }
   }
 
-  // Initial calculation on load
+  // Initial UI Setup & Calculation
+  updateUIControls();
   calculate();
 </script>
 </body>
