@@ -533,6 +533,10 @@
     document.getElementById('water-controls').classList.toggle('hidden', m !== 'water');
     document.getElementById('air-controls').classList.toggle('hidden', m !== 'air');
 
+    if (systemType === 'batch') {
+      batchUnit = (m === 'air') ? 'm3' : 'L';
+    }
+
     setDefaultQty();
     updateUIControls();
     calculate();
