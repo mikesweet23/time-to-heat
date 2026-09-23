@@ -455,6 +455,141 @@
     .hidden {
       display: none !important;
     }
+
+    .qty-equiv {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .warning {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #f59e0b;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+
+    [data-theme="day"] .warning {
+      color: #b45309;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .card-title {
+      color: var(--text-main);
+      font-size: 0.95rem;
+    }
+
+    .velocity-badge {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .save-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .save-row input {
+      flex: 1;
+      min-width: 0;
+      background: var(--control-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .save-row input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .saved-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .saved-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--info-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .saved-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .saved-name {
+      color: var(--text-main);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .saved-meta {
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+    }
+
+    .saved-btn {
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .saved-delete {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      padding: 6px 9px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(24px + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      background: var(--text-main);
+      color: var(--bg-color);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      z-index: 200;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
   </style>
 </head>
 <body>
@@ -481,7 +616,13 @@
     <button id="btn-type-flow" onclick="setSystemType('flow')">🔄 Flow Rate</button>
   </div>
 
-  <!-- 3. Target Calculation Switch -->
+  <!-- 3. Heating vs Cooling -->
+  <div class="segmented-control">
+    <button id="btn-dir-heat" class="active" onclick="setDirection('heat')">🔥 Heating</button>
+    <button id="btn-dir-cool" onclick="setDirection('cool')">❄️ Cooling</button>
+  </div>
+
+  <!-- 4. Target Calculation Switch -->
   <div class="segmented-control" id="solve-mode-control">
     <button id="btn-solve-1" class="active" onclick="setSolveMode('mode1')">Solve Time</button>
     <button id="btn-solve-2" onclick="setSolveMode('mode2')">Solve Power (kW)</button>
@@ -489,7 +630,7 @@
 
   <!-- Inputs Card -->
   <div class="card">
-    
+
     <!-- SYSTEM QUANTITY INPUT (Dynamic label/units) -->
     <div class="input-group">
       <div class="input-label">
@@ -497,14 +638,13 @@
           <span id="qty-label">Water Volume</span>
         </div>
         <div class="unit-toggle" id="qty-unit-toggle" role="group" aria-label="Quantity units">
-          <button type="button" id="qty-unit-a" class="active" onclick="setQtyUnit('a')">L</button>
-          <button type="button" id="qty-unit-b" onclick="setQtyUnit('b')">m³</button>
+          <button type="button" id="qty-unit-0" onclick="setQtyUnit(0)">L</button>
+          <button type="button" id="qty-unit-1" onclick="setQtyUnit(1)">m³</button>
+          <button type="button" id="qty-unit-2" onclick="setQtyUnit(2)">m³/s</button>
         </div>
       </div>
-      <div class="input-label" style="justify-content: flex-end; margin-top: -2px;">
-        <span class="value" id="qty-val-display">5,000 L</span>
-      </div>
-      <input type="number" id="system-qty" value="5000" step="10" oninput="calculate()">
+      <input type="number" id="system-qty" value="5000" step="10" inputmode="decimal" oninput="calculate()">
+      <div class="qty-equiv" id="qty-equiv"></div>
       <div class="instruction-text" id="qty-instruction">Total volume contained in the vessel or system.</div>
     </div>
 
@@ -512,44 +652,48 @@
     <div id="water-controls">
       <div class="input-group">
         <div class="input-label">
-          <span>Glycol Ratio</span>
+          <span>Glycol</span>
+          <div class="unit-toggle" role="group" aria-label="Glycol type">
+            <button type="button" id="glycol-type-eg" class="active" onclick="setGlycolType('eg')">Ethylene</button>
+            <button type="button" id="glycol-type-pg" onclick="setGlycolType('pg')">Propylene</button>
+          </div>
+        </div>
+        <div class="input-label" style="justify-content: flex-end; margin-top: -2px;">
           <span class="value" id="glycol-val">0% Glycol</span>
         </div>
         <input type="range" id="glycol-slider" min="0" max="50" step="10" value="0" oninput="calculate()">
-        <div class="instruction-text">Higher glycol reduces specific heat capacity ($c_p$) and increases density.</div>
+        <div class="instruction-text">Concentration by mass. Glycol lowers specific heat capacity (c<sub>p</sub>), raises density and lowers the freezing point. Propylene is the food-safe, lower-toxicity option.</div>
       </div>
     </div>
 
-    <!-- AIR SPECIFIC CONTROLS -->
-    <div id="air-controls" class="hidden">
-      <div class="input-group">
-        <div class="input-label">
-          <span>Initial Air Temperature</span>
-          <span class="value" id="air-temp-val">20°C</span>
-        </div>
-        <input type="range" id="air-temp-slider" min="-10" max="40" step="5" value="20" oninput="calculate()">
-        <div class="instruction-text">Air density varies based on entering temperature.</div>
+    <!-- START TEMPERATURE -->
+    <div class="input-group">
+      <div class="input-label">
+        <span id="start-temp-label">Start Temperature</span>
+        <span class="value">°C</span>
       </div>
+      <input type="number" id="start-temp" value="20" step="1" inputmode="decimal" oninput="calculate()">
+      <div class="instruction-text" id="start-temp-instruction">Temperature of the fluid before heating. Sets its density (and so its mass).</div>
     </div>
 
     <!-- DELTA T INPUT -->
     <div id="delta-group" class="input-group">
       <div class="input-label">
-        <span>Temperature Rise / Drop (ΔT)</span>
-        <span class="value" id="delta-val">20 °C</span>
+        <span id="delta-label">Temperature Rise (ΔT)</span>
+        <span class="value" id="delta-val">20 → 40 °C</span>
       </div>
-      <input type="number" id="delta-t" value="20" step="1" oninput="calculate()">
-      <div class="instruction-text">The temperature difference between entering and leaving conditions.</div>
+      <input type="number" id="delta-t" value="20" min="0" step="1" inputmode="decimal" oninput="calculate()">
+      <div class="instruction-text" id="delta-instruction">How much the temperature rises from the start temperature.</div>
     </div>
 
     <!-- POWER INPUT (When solving for Time or Delta T) -->
     <div id="power-input-group" class="input-group">
       <div class="input-label">
-        <span>Heater/Cooler Output</span>
+        <span id="power-label">Heater Output</span>
         <span class="value">kW</span>
       </div>
-      <input type="number" id="input-power" value="50" step="1" oninput="calculate()">
-      <div class="instruction-text">Thermal heating or cooling power available.</div>
+      <input type="number" id="input-power" value="50" step="1" inputmode="decimal" oninput="calculate()">
+      <div class="instruction-text" id="power-instruction">Thermal heating power available.</div>
     </div>
 
     <!-- TIME INPUT (When solving for Power in Batch mode) -->
@@ -565,17 +709,17 @@
         <span class="value" id="target-time-label">3600 s (1 hr)</span>
       </div>
       <div id="time-seconds-row">
-        <input type="number" id="input-time" value="3600" min="0" step="60" oninput="syncTimeFromSeconds()">
+        <input type="number" id="input-time" value="3600" min="0" step="60" inputmode="numeric" oninput="syncTimeFromSeconds()">
       </div>
       <div id="time-minsec-row" class="minsec-row hidden">
         <div class="minsec-field">
           <label for="input-minutes">Minutes</label>
-          <input type="number" id="input-minutes" value="60" min="0" step="1" oninput="syncTimeFromMinSec()">
+          <input type="number" id="input-minutes" value="60" min="0" step="1" inputmode="numeric" oninput="syncTimeFromMinSec()">
         </div>
         <div class="minsec-colon">:</div>
         <div class="minsec-field">
           <label for="input-seconds">Seconds</label>
-          <input type="number" id="input-seconds" value="0" min="0" max="59" step="1" oninput="syncTimeFromMinSec()">
+          <input type="number" id="input-seconds" value="0" min="0" max="59" step="1" inputmode="numeric" oninput="syncTimeFromMinSec()">
         </div>
       </div>
       <div class="instruction-text">Duration available to achieve the temperature change.</div>
@@ -583,9 +727,45 @@
 
     <!-- FLUID / AIR SPEC INFO -->
     <div class="info-badge">
-      <span>c<sub>p</sub>: <span class="highlight" id="cp-display">4.186 kJ/kg·°C</span></span>
-      <span>Density (ρ): <span class="highlight" id="density-display">1.000 kg/L</span></span>
+      <span>c<sub>p</sub> <span id="cp-at">@ 30 °C</span>: <span class="highlight" id="cp-display">4.186 kJ/kg·°C</span></span>
+      <span>ρ <span id="density-at">@ 20 °C</span>: <span class="highlight" id="density-display">1.000 kg/L</span></span>
     </div>
+
+    <div id="temp-warning" class="warning hidden"></div>
+  </div>
+
+  <!-- PIPE / DUCT VELOCITY CHECK (flow mode) -->
+  <div class="card hidden" id="velocity-card">
+    <div class="input-group">
+      <div class="input-label">
+        <span id="velocity-title" class="card-title">📏 Pipe Velocity Check</span>
+        <div class="unit-toggle" id="duct-shape-toggle" role="group" aria-label="Duct shape">
+          <button type="button" id="duct-shape-round" class="active" onclick="setDuctShape('round')">Round</button>
+          <button type="button" id="duct-shape-rect" onclick="setDuctShape('rect')">Rect</button>
+        </div>
+      </div>
+      <div class="instruction-text" id="size-label">Pipe Internal Diameter</div>
+      <div id="size-round-row" class="minsec-field">
+        <label for="pipe-dia" id="pipe-dia-label">Internal diameter (mm)</label>
+        <input type="number" id="pipe-dia" min="0" step="1" inputmode="decimal" placeholder="e.g. 54" oninput="calculate()">
+      </div>
+      <div id="size-rect-row" class="minsec-row hidden">
+        <div class="minsec-field">
+          <label for="duct-w">Width (mm)</label>
+          <input type="number" id="duct-w" min="0" step="50" inputmode="decimal" placeholder="e.g. 400" oninput="calculate()">
+        </div>
+        <div class="minsec-colon">×</div>
+        <div class="minsec-field">
+          <label for="duct-h">Height (mm)</label>
+          <input type="number" id="duct-h" min="0" step="50" inputmode="decimal" placeholder="e.g. 250" oninput="calculate()">
+        </div>
+      </div>
+    </div>
+    <div class="info-badge velocity-badge">
+      <span class="highlight" id="velocity-result"></span>
+      <span id="velocity-sizing"></span>
+    </div>
+    <div class="instruction-text" id="velocity-guide"></div>
   </div>
 
   <!-- RESULT DISPLAY -->
@@ -593,7 +773,26 @@
     <div class="result-title" id="result-title">Estimated Heating Time</div>
     <div class="result-value" id="result-primary">0s</div>
     <div class="result-sub" id="result-secondary">Total Energy: 0 kWh</div>
+    <div class="result-sub" id="result-tertiary"></div>
   </div>
+
+  <div class="result-actions">
+    <button type="button" class="btn-secondary" onclick="shareResult()">📤 Share result</button>
+    <button type="button" class="btn-secondary" onclick="resetInputs()">↺ Reset</button>
+  </div>
+
+  <!-- SAVED CALCULATIONS -->
+  <details id="saved-section">
+    <summary>💾 Saved Calculations <span id="saved-count"></span></summary>
+    <div class="guide-content">
+      <div class="save-row">
+        <input type="text" id="save-name" maxlength="80" placeholder="Name, e.g. Plant room AHU-1" onkeydown="if (event.key === 'Enter') saveCalculation()">
+        <button type="button" class="btn-primary" onclick="saveCalculation()">Save</button>
+      </div>
+      <div id="saved-list" class="saved-list"></div>
+      <p class="instruction-text">Saved on this device only.</p>
+    </div>
+  </details>
 
   <!-- IN-APP QUICK INSTRUCTION GUIDE -->
   <details>
@@ -602,16 +801,22 @@
       <p><b>1. Select Medium:</b> Choose between Water/Glycol mix or Air.</p>
       <p><b>2. Select System Type:</b>
         <br>• <i>Batch:</i> For closed tanks, storage vessels, or room air volumes. Toggle volume units between litres (L) and cubic metres (m³).
-        <br>• <i>Flow Rate:</i> For inline heaters, coils, boilers, or pump loops. Toggle flow units between L/s and m³/s.</p>
-      <p><b>3. Select What to Solve:</b>
-        <br>• <i>Batch Mode:</i> Calculate time required (seconds/hours) OR power required (kW). Target time can be entered in seconds or as minutes and seconds.
-        <br>• <i>Flow Mode:</i> Calculate power required (kW) for a given flow OR temperature rise (ΔT) produced by a heater.</p>
-      <p><b>4. Display:</b> Switch Day or Night mode from the top of the app.</p>
-      <p><b>5. Install:</b> Add the app to your home screen to open it full screen and use it offline.
+        <br>• <i>Flow Rate:</i> For inline heaters, coils, boilers, or pump loops. Toggle flow units between L/s, m³/h and m³/s.</p>
+      <p><b>3. Heating or Cooling:</b> Sets whether the temperature rises or drops from the start temperature.</p>
+      <p><b>4. Select What to Solve:</b>
+        <br>• <i>Batch Mode:</i> Calculate time required OR power required (kW). Target time can be entered in seconds or as minutes and seconds.
+        <br>• <i>Flow Mode:</i> Calculate power required (kW) for a given flow OR the temperature change (ΔT) a heater or cooler produces.</p>
+      <p><b>5. Start Temperature:</b> Density is taken at the start temperature (volumes and flow rates are measured there, so this sets the mass). Specific heat (c<sub>p</sub>) is taken at the mean of the start and end temperatures.</p>
+      <p><b>6. Velocity Check:</b> In Flow mode, enter a pipe internal diameter or duct size to see the velocity, plus the smallest size that keeps it within typical limits.</p>
+      <p><b>7. Share &amp; Save:</b> Your last inputs are remembered. <i>Share result</i> sends a summary with a link that reopens the same calculation. <i>Saved Calculations</i> keeps a named list of jobs on this device.</p>
+      <p><b>8. Display:</b> Switch Day or Night mode from the top of the app.</p>
+      <p><b>9. Install:</b> Add the app to your home screen to open it full screen and use it offline.
         <br><button type="button" class="install-link" onclick="showInstallSheet()">📲 Show install instructions</button></p>
     </div>
   </details>
 </div>
+
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
 <!-- INSTALL (ADD TO HOME SCREEN) INSTRUCTIONS -->
 <div id="install-overlay" class="install-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="install-title" onclick="if (event.target === this) hideInstallSheet()">
@@ -660,20 +865,135 @@
 <script>
   let medium = 'water';
   let systemType = 'batch';
-  let solveMode = 'mode1'; // mode1: Time or Power; mode2: Power or DeltaT
-  let batchUnit = 'L';     // 'L' | 'm3'
-  let flowUnit = 'Ls';     // 'Ls' | 'm3s'
+  let direction = 'heat';   // 'heat' | 'cool'
+  let solveMode = 'mode1';  // mode1: Time or Power; mode2: Power or DeltaT
+  let batchUnit = 'L';      // see BATCH_UNITS
+  let flowUnit = 'Ls';      // see FLOW_UNITS
   let timeUnit = 'seconds'; // 'seconds' | 'minsec'
+  let glycolType = 'eg';    // 'eg' | 'pg'
+  let ductShape = 'round';  // 'round' | 'rect'
 
-  // Specific heat & density for glycol mixes at ~20°C
-  const glycolData = {
-    0:  { cp: 4.186, density: 1.000, name: "0% Glycol (Pure Water)" },
-    10: { cp: 4.050, density: 1.012, name: "10% Glycol Mix" },
-    20: { cp: 3.880, density: 1.026, name: "20% Glycol Mix" },
-    30: { cp: 3.700, density: 1.040, name: "30% Glycol Mix" },
-    40: { cp: 3.500, density: 1.055, name: "40% Glycol Mix" },
-    50: { cp: 3.300, density: 1.070, name: "50% Glycol Mix" }
+  // Quantities are handled internally in litres (batch) and L/s (flow).
+  const BATCH_UNITS = [
+    { id: 'L',  label: 'L',  factor: 1 },
+    { id: 'm3', label: 'm³', factor: 1000 }
+  ];
+  const FLOW_UNITS = [
+    { id: 'Ls',  label: 'L/s',  factor: 1 },
+    { id: 'm3h', label: 'm³/h', factor: 1 / 3.6 },
+    { id: 'm3s', label: 'm³/s', factor: 1000 }
+  ];
+
+  // Glycol mixes (by mass): properties at 20 °C, linear temperature slopes per °C,
+  // and approximate freezing points. Pure water (0%) uses the correlations below.
+  const GLYCOLS = {
+    eg: {
+      name: 'Ethylene',
+      10: { cp: 4.050, density: 1.012, cpSlope: 0.0010, rhoSlope: -0.00024, freeze: -3.4 },
+      20: { cp: 3.880, density: 1.026, cpSlope: 0.0020, rhoSlope: -0.00028, freeze: -7.9 },
+      30: { cp: 3.700, density: 1.040, cpSlope: 0.0030, rhoSlope: -0.00032, freeze: -14.1 },
+      40: { cp: 3.500, density: 1.055, cpSlope: 0.0040, rhoSlope: -0.00036, freeze: -22.3 },
+      50: { cp: 3.300, density: 1.070, cpSlope: 0.0050, rhoSlope: -0.00040, freeze: -33.8 }
+    },
+    pg: {
+      name: 'Propylene',
+      10: { cp: 4.080, density: 1.008, cpSlope: 0.0010, rhoSlope: -0.00024, freeze: -3.3 },
+      20: { cp: 4.000, density: 1.017, cpSlope: 0.0015, rhoSlope: -0.00030, freeze: -7.1 },
+      30: { cp: 3.880, density: 1.026, cpSlope: 0.0025, rhoSlope: -0.00036, freeze: -12.7 },
+      40: { cp: 3.730, density: 1.034, cpSlope: 0.0030, rhoSlope: -0.00042, freeze: -21.1 },
+      50: { cp: 3.560, density: 1.041, cpSlope: 0.0035, rhoSlope: -0.00050, freeze: -33.5 }
+    }
   };
+
+  function glycolPct() {
+    const pct = document.getElementById('glycol-slider').value;
+    return GLYCOLS.eg[pct] ? pct : '0';
+  }
+
+  // null for pure water
+  function glycolMix() {
+    const pct = glycolPct();
+    return pct === '0' ? null : GLYCOLS[glycolType][pct];
+  }
+
+  function glycolName() {
+    const pct = glycolPct();
+    return pct === '0' ? '0% Glycol (Pure Water)' : `${pct}% ${GLYCOLS[glycolType].name} Glycol`;
+  }
+
+  // Typical design velocity ranges (m/s), for guidance only.
+  const VELOCITY_GUIDE = {
+    water: { lo: 0.5, hi: 1.5, sizeFor: 1.5, text: 'typical 0.5–1.5 m/s for heating/chilled water pipework' },
+    air:   { lo: 2.5, hi: 6.0, sizeFor: 5.0, text: 'typical 2.5–6 m/s for low-velocity ductwork' }
+  };
+
+  const AIR_CP = 1.005; // kJ/kg·°C
+
+  const DEFAULT_STATE = {
+    m: 'water', s: 'batch', d: 'heat', v: 'mode1', bu: 'L', fu: 'Ls', tu: 'seconds',
+    q: null, g: '0', gt: 'eg', t0: '20', dt: '20', p: '50', tt: '3600',
+    ds: 'round', pd: '', dw: '', dh: ''
+  };
+
+  function clamp(x, lo, hi) { return Math.min(hi, Math.max(lo, x)); }
+
+  function roundSig(value, sig) {
+    if (!isFinite(value) || value === 0) return 0;
+    return parseFloat(value.toPrecision(sig));
+  }
+
+  function fmtNum(value, maxDecimals) {
+    return value.toLocaleString(undefined, { maximumFractionDigits: maxDecimals });
+  }
+
+  function fmtTemp(t) {
+    return `${fmtNum(Math.round(t * 10) / 10, 1)} °C`;
+  }
+
+  // Pure water, valid 0–100 °C. Density (Kell-type fit) in kg/L, cp in kJ/kg·°C.
+  function waterProps(T) {
+    const t = clamp(T, 0, 100);
+    const density = 1 - ((t + 288.9414) / (508929.2 * (t + 68.12963))) * Math.pow(t - 3.9863, 2);
+    const cp = 4.2174356 - 0.0056181625 * t + 0.0012992528 * Math.pow(t, 1.5)
+      - 0.00011535353 * t * t + 4.14964e-6 * Math.pow(t, 2.5);
+    return { density, cp };
+  }
+
+  // Returns density in kg/L and cp in kJ/kg·°C at temperature T (°C).
+  function fluidProps(T) {
+    if (medium === 'air') {
+      const kgM3 = 353.0 / (Math.max(T, -200) + 273.15);
+      return { density: kgM3 / 1000, cp: AIR_CP };
+    }
+    const d = glycolMix();
+    if (!d) return waterProps(T);
+    const t = clamp(T, -40, 120);
+    return {
+      density: d.density + d.rhoSlope * (t - 20),
+      cp: d.cp + d.cpSlope * (t - 20)
+    };
+  }
+
+  function unitList() { return systemType === 'batch' ? BATCH_UNITS : FLOW_UNITS; }
+
+  function currentUnit() {
+    const id = systemType === 'batch' ? batchUnit : flowUnit;
+    return unitList().find(u => u.id === id) || unitList()[0];
+  }
+
+  function defaultInternalQty() {
+    if (systemType === 'batch') return medium === 'water' ? 5000 : 500000; // L (air: 500 m³)
+    return medium === 'water' ? 2.5 : 150; // L/s
+  }
+
+  function setDefaultQty() {
+    document.getElementById('system-qty').value = roundSig(defaultInternalQty() / currentUnit().factor, 6);
+  }
+
+  function getInternalQty() {
+    const qty = parseFloat(document.getElementById('system-qty').value) || 0;
+    return qty * currentUnit().factor;
+  }
 
   function setTheme(theme) {
     const next = theme === 'day' ? 'day' : 'night';
@@ -699,15 +1019,9 @@
 
   function setMedium(m) {
     medium = m;
-    document.getElementById('btn-water').classList.toggle('active', m === 'water');
-    document.getElementById('btn-air').classList.toggle('active', m === 'air');
-    document.getElementById('water-controls').classList.toggle('hidden', m !== 'water');
-    document.getElementById('air-controls').classList.toggle('hidden', m !== 'air');
-
     if (systemType === 'batch') {
       batchUnit = (m === 'air') ? 'm3' : 'L';
     }
-
     setDefaultQty();
     updateUIControls();
     calculate();
@@ -715,84 +1029,43 @@
 
   function setSystemType(type) {
     systemType = type;
-    document.getElementById('btn-type-batch').classList.toggle('active', type === 'batch');
-    document.getElementById('btn-type-flow').classList.toggle('active', type === 'flow');
-
     setDefaultQty();
+    updateUIControls();
+    calculate();
+  }
+
+  function setDirection(dir) {
+    direction = dir === 'cool' ? 'cool' : 'heat';
+    updateUIControls();
+    calculate();
+  }
+
+  function setGlycolType(type) {
+    glycolType = type === 'pg' ? 'pg' : 'eg';
+    updateUIControls();
+    calculate();
+  }
+
+  function setDuctShape(shape) {
+    ductShape = shape === 'rect' ? 'rect' : 'round';
     updateUIControls();
     calculate();
   }
 
   function setSolveMode(mode) {
     solveMode = mode;
-    document.getElementById('btn-solve-1').classList.toggle('active', mode === 'mode1');
-    document.getElementById('btn-solve-2').classList.toggle('active', mode === 'mode2');
     updateUIControls();
     calculate();
   }
 
-  function setDefaultQty() {
-    const qtyInput = document.getElementById('system-qty');
-    if (systemType === 'batch') {
-      if (medium === 'water') {
-        qtyInput.value = batchUnit === 'm3' ? 5 : 5000;
-        qtyInput.step = batchUnit === 'm3' ? 0.1 : 10;
-      } else {
-        qtyInput.value = batchUnit === 'L' ? 500000 : 500;
-        qtyInput.step = batchUnit === 'L' ? 100 : 10;
-      }
-    } else {
-      if (medium === 'water') {
-        qtyInput.value = flowUnit === 'm3s' ? 0.0025 : 2.5;
-        qtyInput.step = flowUnit === 'm3s' ? 0.0005 : 0.1;
-      } else {
-        qtyInput.value = flowUnit === 'm3s' ? 0.15 : 150;
-        qtyInput.step = flowUnit === 'm3s' ? 0.01 : 1;
-      }
-    }
-  }
-
-  function setQtyUnit(which) {
-    const qtyInput = document.getElementById('system-qty');
-    const current = parseFloat(qtyInput.value) || 0;
-
-    if (systemType === 'batch') {
-      const next = which === 'b' ? 'm3' : 'L';
-      if (next !== batchUnit) {
-        qtyInput.value = next === 'm3' ? roundQty(current / 1000, 4) : roundQty(current * 1000, 3);
-        batchUnit = next;
-      }
-    } else {
-      const next = which === 'b' ? 'm3s' : 'Ls';
-      if (next !== flowUnit) {
-        qtyInput.value = next === 'm3s' ? roundQty(current / 1000, 6) : roundQty(current * 1000, 4);
-        flowUnit = next;
-      }
-    }
-
+  function setQtyUnit(index) {
+    const next = unitList()[index];
+    if (!next) return;
+    const internal = getInternalQty();
+    if (systemType === 'batch') batchUnit = next.id; else flowUnit = next.id;
+    document.getElementById('system-qty').value = roundSig(internal / next.factor, 6);
     updateUIControls();
     calculate();
-  }
-
-  function roundQty(value, decimals) {
-    const factor = Math.pow(10, decimals);
-    return Math.round(value * factor) / factor;
-  }
-
-  function getInternalQty() {
-    const qty = parseFloat(document.getElementById('system-qty').value) || 0;
-    if (systemType === 'batch') {
-      if (medium === 'water') {
-        return batchUnit === 'm3' ? qty * 1000 : qty; // litres
-      }
-      return batchUnit === 'L' ? qty / 1000 : qty; // m³
-    }
-    return flowUnit === 'm3s' ? qty * 1000 : qty; // L/s
-  }
-
-  function currentQtyUnitLabel() {
-    if (systemType === 'batch') return batchUnit === 'm3' ? 'm³' : 'L';
-    return flowUnit === 'm3s' ? 'm³/s' : 'L/s';
   }
 
   function getTargetSeconds() {
@@ -836,61 +1109,91 @@
   }
 
   function updateUIControls() {
+    const heating = direction === 'heat';
+    const fluid = medium === 'water' ? 'water' : 'air';
+
+    document.getElementById('btn-water').classList.toggle('active', medium === 'water');
+    document.getElementById('btn-air').classList.toggle('active', medium === 'air');
+    document.getElementById('water-controls').classList.toggle('hidden', medium !== 'water');
+    document.getElementById('btn-type-batch').classList.toggle('active', systemType === 'batch');
+    document.getElementById('btn-type-flow').classList.toggle('active', systemType === 'flow');
+    document.getElementById('btn-dir-heat').classList.toggle('active', heating);
+    document.getElementById('btn-dir-cool').classList.toggle('active', !heating);
+    document.getElementById('btn-solve-1').classList.toggle('active', solveMode === 'mode1');
+    document.getElementById('btn-solve-2').classList.toggle('active', solveMode === 'mode2');
+    document.getElementById('glycol-type-eg').classList.toggle('active', glycolType === 'eg');
+    document.getElementById('glycol-type-pg').classList.toggle('active', glycolType === 'pg');
+
+    // Pipe / duct velocity check (flow mode only)
+    const air = medium === 'air';
+    const rect = air && ductShape === 'rect';
+    document.getElementById('velocity-card').classList.toggle('hidden', systemType !== 'flow');
+    document.getElementById('velocity-title').innerText = air ? '📏 Duct Velocity Check' : '📏 Pipe Velocity Check';
+    document.getElementById('duct-shape-toggle').classList.toggle('hidden', !air);
+    document.getElementById('duct-shape-round').classList.toggle('active', !rect);
+    document.getElementById('duct-shape-rect').classList.toggle('active', rect);
+    document.getElementById('size-round-row').classList.toggle('hidden', rect);
+    document.getElementById('size-rect-row').classList.toggle('hidden', !rect);
+    document.getElementById('size-label').innerText = air ? 'Duct Size' : 'Pipe Internal Diameter';
+    document.getElementById('pipe-dia-label').innerText = air ? 'Diameter (mm)' : 'Internal diameter (mm)';
+
+    // Quantity unit buttons
+    const units = unitList();
+    const active = currentUnit().id;
+    for (let i = 0; i < 3; i++) {
+      const btn = document.getElementById(`qty-unit-${i}`);
+      const u = units[i];
+      btn.classList.toggle('hidden', !u);
+      if (u) {
+        btn.innerText = u.label;
+        btn.classList.toggle('active', u.id === active);
+      }
+    }
+
     const btn1 = document.getElementById('btn-solve-1');
     const btn2 = document.getElementById('btn-solve-2');
     const qtyLabel = document.getElementById('qty-label');
     const qtyInst = document.getElementById('qty-instruction');
-    const unitA = document.getElementById('qty-unit-a');
-    const unitB = document.getElementById('qty-unit-b');
 
     if (systemType === 'batch') {
       btn1.innerText = "Solve Time";
       btn2.innerText = "Solve Power (kW)";
-      unitA.innerText = "L";
-      unitB.innerText = "m³";
-      unitA.classList.toggle('active', batchUnit === 'L');
-      unitB.classList.toggle('active', batchUnit === 'm3');
-
-      if (medium === 'water') {
-        qtyLabel.innerText = "Water Volume";
-        qtyInst.innerText = batchUnit === 'm3'
-          ? "Total volume in cubic metres (m³) contained in tank/system."
-          : "Total volume in litres contained in tank/system.";
-      } else {
-        qtyLabel.innerText = "Air Volume";
-        qtyInst.innerText = batchUnit === 'L'
-          ? "Total air volume in litres (L)."
-          : "Total air volume in cubic metres (m³).";
-      }
+      qtyLabel.innerText = medium === 'water' ? "Water Volume" : "Air Volume";
+      qtyInst.innerText = medium === 'water'
+        ? `Total volume contained in the tank/system, in ${currentUnit().label}.`
+        : `Total air volume (e.g. room volume), in ${currentUnit().label}.`;
+      document.getElementById('start-temp-label').innerText = "Start Temperature";
+      document.getElementById('start-temp-instruction').innerText =
+        `Temperature of the ${fluid} before ${heating ? 'heating' : 'cooling'}. Sets its density, and so its mass.`;
 
       document.getElementById('power-input-group').classList.toggle('hidden', solveMode !== 'mode1');
       document.getElementById('time-input-group').classList.toggle('hidden', solveMode !== 'mode2');
       document.getElementById('delta-group').classList.remove('hidden');
-
     } else {
       btn1.innerText = "Solve Power (kW)";
-      btn2.innerText = "Solve Temp Rise (ΔT)";
-      unitA.innerText = "L/s";
-      unitB.innerText = "m³/s";
-      unitA.classList.toggle('active', flowUnit === 'Ls');
-      unitB.classList.toggle('active', flowUnit === 'm3s');
-
-      qtyLabel.innerText = (medium === 'water') ? "Water Flow Rate" : "Air Flow Rate";
-      qtyInst.innerText = flowUnit === 'm3s'
-        ? "Continuous volumetric flow rate in cubic metres per second (m³/s)."
-        : "Continuous volumetric flow rate in litres per second (L/s).";
+      btn2.innerText = heating ? "Solve Temp Rise (ΔT)" : "Solve Temp Drop (ΔT)";
+      qtyLabel.innerText = medium === 'water' ? "Water Flow Rate" : "Air Flow Rate";
+      qtyInst.innerText = `Continuous volumetric flow rate, measured at the entering temperature, in ${currentUnit().label}.`;
+      document.getElementById('start-temp-label').innerText = "Entering Temperature";
+      document.getElementById('start-temp-instruction').innerText =
+        `Temperature of the ${fluid} entering the ${heating ? 'heater' : 'cooler'}. Sets its density, converting volume flow to mass flow.`;
 
       document.getElementById('power-input-group').classList.toggle('hidden', solveMode !== 'mode2');
       document.getElementById('time-input-group').classList.add('hidden');
       document.getElementById('delta-group').classList.toggle('hidden', solveMode === 'mode2');
     }
 
-    document.getElementById('qty-unit-toggle').classList.remove('hidden');
+    document.getElementById('delta-label').innerText = heating ? "Temperature Rise (ΔT)" : "Temperature Drop (ΔT)";
+    document.getElementById('delta-instruction').innerText = heating
+      ? "How much the temperature rises above the start temperature."
+      : "How much the temperature drops below the start temperature.";
+    document.getElementById('power-label').innerText = heating ? "Heater Output" : "Cooler Output";
+    document.getElementById('power-instruction').innerText = `Thermal ${heating ? 'heating' : 'cooling'} power available.`;
   }
 
   function formatTime(totalSeconds) {
     if (totalSeconds < 60) return `${Math.round(totalSeconds)}s`;
-    
+
     const days = Math.floor(totalSeconds / 86400);
     const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -915,122 +1218,425 @@
     return `${safe} s (${formatTime(safe)})`;
   }
 
-  function calculate() {
-    const enteredQty = parseFloat(document.getElementById('system-qty').value) || 0;
-    const qty = getInternalQty();
-    const deltaT = parseFloat(document.getElementById('delta-t').value) || 0;
-    document.getElementById('delta-val').innerText = `${deltaT} °C`;
+  function updateQtyEquivalents(internalQty) {
+    const others = unitList().filter(u => u.id !== currentUnit().id);
+    const text = others.map(u => `${fmtNum(roundSig(internalQty / u.factor, 4), 6)} ${u.label}`).join(' · ');
+    document.getElementById('qty-equiv').innerText = internalQty > 0 ? `= ${text}` : '';
+  }
 
-    let cp = 4.186; // kJ/kg·°C
-    let densityKgL = 1.000; // kg/L
-    let densityText = '';
-    const unitLabel = currentQtyUnitLabel();
-    const displayQty = Number.isInteger(enteredQty)
-      ? enteredQty.toLocaleString()
-      : enteredQty.toLocaleString(undefined, { maximumFractionDigits: 6 });
-    document.getElementById('qty-val-display').innerText = `${displayQty} ${unitLabel}`;
-
+  function updateWarning(tStart, tEnd) {
+    const lo = Math.min(tStart, tEnd);
+    const hi = Math.max(tStart, tEnd);
+    const msgs = [];
     if (medium === 'water') {
-      const glycolPct = document.getElementById('glycol-slider').value;
-      const data = glycolData[glycolPct];
-      cp = data.cp;
-      densityKgL = data.density;
+      const mix = glycolMix();
+      const freeze = mix ? mix.freeze : 0;
+      if (lo < freeze) {
+        msgs.push(!mix
+          ? `⚠️ ${fmtTemp(lo)} is below 0 °C — water would freeze. Add glycol for sub-zero temperatures.`
+          : `⚠️ ${fmtTemp(lo)} is below the ~${freeze} °C freezing point of ${glycolName().toLowerCase()}.`);
+      }
+      if (hi > 100) {
+        msgs.push(`⚠️ Above 100 °C assumes a pressurised system; fluid properties are extrapolated.`);
+      }
+    } else if (lo <= -273.15) {
+      msgs.push(`⚠️ Temperatures cannot go below absolute zero (−273.15 °C).`);
+    }
+    const el = document.getElementById('temp-warning');
+    el.innerText = msgs.join('\n');
+    el.classList.toggle('hidden', msgs.length === 0);
+  }
 
-      document.getElementById('glycol-val').innerText = data.name;
-      densityText = `${densityKgL.toFixed(3)} kg/L`;
-
+  function updateVelocity(flowLs) {
+    if (systemType !== 'flow') return;
+    const guide = VELOCITY_GUIDE[medium];
+    const flowM3s = flowLs / 1000;
+    let areaM2 = 0;
+    if (medium === 'air' && ductShape === 'rect') {
+      const w = parseFloat(document.getElementById('duct-w').value) || 0;
+      const h = parseFloat(document.getElementById('duct-h').value) || 0;
+      areaM2 = (w / 1000) * (h / 1000);
     } else {
-      const initialTemp = parseFloat(document.getElementById('air-temp-slider').value);
-      // Density of air kg/m3 = 353 / (T + 273.15)
-      const airDensityKgM3 = 353.00 / (initialTemp + 273.15); 
-      densityKgL = airDensityKgM3 / 1000; // Convert kg/m3 to kg/L
-      cp = 1.005; // kJ/kg·°C
-
-      document.getElementById('air-temp-val').innerText = `${initialTemp} °C`;
-      densityText = `${airDensityKgM3.toFixed(3)} kg/m³`;
+      const dia = parseFloat(document.getElementById('pipe-dia').value) || 0;
+      areaM2 = Math.PI * Math.pow(dia / 1000, 2) / 4;
     }
 
-    document.getElementById('cp-display').innerText = `${cp.toFixed(3)} kJ/kg·°C`;
-    document.getElementById('density-display').innerText = densityText;
+    const resultEl = document.getElementById('velocity-result');
+    if (areaM2 > 0 && flowM3s > 0) {
+      const v = flowM3s / areaM2;
+      let verdict = '✅ within the typical range';
+      if (v > guide.hi) verdict = medium === 'air' ? '⚠️ high – risk of noise and pressure drop' : '⚠️ high – risk of noise, erosion and pressure drop';
+      else if (v < guide.lo) verdict = '⚠️ low – the size could be reduced';
+      resultEl.innerText = `Velocity: ${v.toFixed(2)} m/s — ${verdict}`;
+    } else {
+      resultEl.innerText = medium === 'air' ? 'Enter a duct size to check the air velocity.' : 'Enter a pipe size to check the water velocity.';
+    }
 
-    // --- BATCH CALCULATIONS ---
-    if (systemType === 'batch') {
-      let massKg = 0;
-      if (medium === 'water') {
-        massKg = qty * densityKgL; // L * kg/L
-      } else {
-        const airDensityKgM3 = densityKgL * 1000;
-        massKg = qty * airDensityKgM3; // m³ * kg/m³
+    // Smallest size that keeps velocity at or below the sizing velocity.
+    let sizeText = '';
+    if (flowM3s > 0) {
+      const minArea = flowM3s / guide.sizeFor;
+      const minDia = Math.sqrt(4 * minArea / Math.PI) * 1000;
+      sizeText = `For ${guide.sizeFor} m/s: ≥ ${Math.ceil(minDia)} mm ${medium === 'air' ? 'round duct' : 'internal diameter'}`;
+      if (medium === 'air') {
+        sizeText += ` or ≥ ${fmtNum(roundSig(minArea, 3), 3)} m² free area (e.g. ${Math.ceil(Math.sqrt(minArea * 2) * 1000)} × ${Math.ceil(Math.sqrt(minArea / 2) * 1000)} mm)`;
       }
+      sizeText += '.';
+    }
+    document.getElementById('velocity-sizing').innerText = sizeText;
+    document.getElementById('velocity-guide').innerText = `Guide: ${guide.text}.`;
+  }
 
+  function setResult(title, primary, secondary, tertiary) {
+    document.getElementById('result-title').innerText = title;
+    document.getElementById('result-primary').innerText = primary;
+    document.getElementById('result-secondary').innerText = secondary;
+    document.getElementById('result-tertiary').innerText = tertiary || '';
+  }
+
+  function calculate() {
+    compute();
+    saveState();
+  }
+
+  function compute() {
+    const heating = direction === 'heat';
+    const sign = heating ? 1 : -1;
+    const verb = heating ? 'Heating' : 'Cooling';
+    const qty = getInternalQty();
+    const tStart = parseFloat(document.getElementById('start-temp').value) || 0;
+    let deltaT = Math.abs(parseFloat(document.getElementById('delta-t').value) || 0);
+
+    updateQtyEquivalents(qty);
+    updateVelocity(qty);
+
+    if (medium === 'water') {
+      document.getElementById('glycol-val').innerText = glycolName();
+    }
+
+    // Density at the start/entering temperature fixes the mass (volume is measured there).
+    const startProps = fluidProps(tStart);
+    const densityKgL = startProps.density;
+    const densityText = medium === 'water'
+      ? `${densityKgL.toFixed(3)} kg/L`
+      : `${(densityKgL * 1000).toFixed(3)} kg/m³`;
+
+    // In flow mode 2 ΔT is the unknown: iterate so cp is taken at the mean temperature.
+    if (systemType === 'flow' && solveMode === 'mode2') {
+      const massFlow = qty * densityKgL;
+      const powerKW = parseFloat(document.getElementById('input-power').value) || 0;
+      deltaT = 0;
+      if (massFlow > 0 && powerKW > 0) {
+        let cp = startProps.cp;
+        for (let i = 0; i < 6; i++) {
+          deltaT = powerKW / (massFlow * cp);
+          cp = fluidProps(tStart + sign * deltaT / 2).cp;
+        }
+        deltaT = powerKW / (massFlow * cp);
+      }
+    }
+
+    const tEnd = tStart + sign * deltaT;
+    const tMean = (tStart + tEnd) / 2;
+    const cp = fluidProps(tMean).cp;
+
+    document.getElementById('delta-val').innerText = `${fmtNum(Math.round(tStart * 10) / 10, 1)} → ${fmtTemp(tEnd)}`;
+    document.getElementById('cp-display').innerText = `${cp.toFixed(3)} kJ/kg·°C`;
+    document.getElementById('cp-at').innerText = `@ ${fmtTemp(tMean)}`;
+    document.getElementById('density-display').innerText = densityText;
+    document.getElementById('density-at').innerText = `@ ${fmtTemp(tStart)}`;
+    updateWarning(tStart, tEnd);
+
+    const tempRange = `${fmtTemp(tStart)} → ${fmtTemp(tEnd)}`;
+
+    // --- BATCH CALCULATIONS (litres internally) ---
+    if (systemType === 'batch') {
+      const massKg = qty * densityKgL;
       const energyKJ = massKg * cp * deltaT;
       const energyKWh = energyKJ / 3600;
+      const massText = `Mass: ${fmtNum(roundSig(massKg, 4), 3)} kg • ${tempRange}`;
 
       if (solveMode === 'mode1') { // Solve Time
         const powerKW = parseFloat(document.getElementById('input-power').value) || 0;
-        document.getElementById('result-title').innerText = "Estimated Heating Time";
-
         if (powerKW <= 0 || energyKJ <= 0) {
-          document.getElementById('result-primary').innerText = "0s";
-          document.getElementById('result-secondary').innerText = "Total Energy: 0 kWh";
+          setResult(`Estimated ${verb} Time`, "0s", "Total Energy: 0 kWh", massText);
           return;
         }
-
         const totalSeconds = energyKJ / powerKW;
-        document.getElementById('result-primary').innerText = formatTime(totalSeconds);
-        document.getElementById('result-secondary').innerText = `(${Math.round(totalSeconds).toLocaleString()} seconds) • Total: ${energyKWh.toFixed(2)} kWh`;
+        setResult(`Estimated ${verb} Time`, formatTime(totalSeconds),
+          `(${Math.round(totalSeconds).toLocaleString()} seconds) • Total: ${energyKWh.toFixed(2)} kWh`, massText);
 
       } else { // Solve Power
         const targetSecs = getTargetSeconds();
         document.getElementById('target-time-label').innerText = formatTargetTimeLabel(targetSecs);
-        document.getElementById('result-title').innerText = "Required Power";
-
         if (targetSecs <= 0 || energyKJ <= 0) {
-          document.getElementById('result-primary').innerText = "0 kW";
-          document.getElementById('result-secondary').innerText = "Total Energy: 0 kWh";
+          setResult(`Required ${verb} Power`, "0 kW", "Total Energy: 0 kWh", massText);
           return;
         }
-
         const requiredKW = energyKJ / targetSecs;
-        document.getElementById('result-primary').innerText = `${requiredKW.toFixed(2)} kW`;
-        document.getElementById('result-secondary').innerText = `Total Energy Required: ${energyKWh.toFixed(2)} kWh`;
+        setResult(`Required ${verb} Power`, `${requiredKW.toFixed(2)} kW`,
+          `Total Energy Required: ${energyKWh.toFixed(2)} kWh`, massText);
       }
 
     // --- CONTINUOUS FLOW CALCULATIONS (L/s internally) ---
     } else {
-      // Mass flow rate in kg/s: (L/s) * (kg/L)
-      const massFlowKgSec = qty * densityKgL;
+      const massFlowKgSec = qty * densityKgL; // (L/s) * (kg/L)
+      const massFlowText = `Mass Flow Rate: ${massFlowKgSec.toFixed(3)} kg/s`;
 
       if (solveMode === 'mode1') { // Solve Power for given flow and Delta T
-        document.getElementById('result-title').innerText = "Required Flow Power";
-
         if (massFlowKgSec <= 0 || deltaT <= 0) {
-          document.getElementById('result-primary').innerText = "0 kW";
-          document.getElementById('result-secondary').innerText = "Mass Flow: 0 kg/s";
+          setResult(`Required ${verb} Power`, "0 kW", "Mass Flow: 0 kg/s", tempRange);
           return;
         }
-
         // P (kW) = mass_flow (kg/s) * cp (kJ/kg°C) * deltaT (°C)
         const powerKW = massFlowKgSec * cp * deltaT;
-        document.getElementById('result-primary').innerText = `${powerKW.toFixed(2)} kW`;
-        document.getElementById('result-secondary').innerText = `Mass Flow Rate: ${massFlowKgSec.toFixed(3)} kg/s`;
+        setResult(`Required ${verb} Power`, `${powerKW.toFixed(2)} kW`, massFlowText, tempRange);
 
       } else { // Solve Delta T for given flow and Power
-        const powerKW = parseFloat(document.getElementById('input-power').value) || 0;
-        document.getElementById('result-title').innerText = "Achievable Temp Rise (ΔT)";
-
-        if (massFlowKgSec <= 0 || powerKW <= 0) {
-          document.getElementById('result-primary').innerText = "0 °C";
-          document.getElementById('result-secondary').innerText = "Mass Flow: 0 kg/s";
+        const title = heating ? "Achievable Temp Rise (ΔT)" : "Achievable Temp Drop (ΔT)";
+        if (deltaT <= 0) {
+          setResult(title, "0 °C", "Mass Flow: 0 kg/s", "");
           return;
         }
-
-        // DeltaT = P / (mass_flow * cp)
-        const calcDeltaT = powerKW / (massFlowKgSec * cp);
-        document.getElementById('result-primary').innerText = `${calcDeltaT.toFixed(1)} °C`;
-        document.getElementById('result-secondary').innerText = `Mass Flow Rate: ${massFlowKgSec.toFixed(3)} kg/s`;
+        setResult(title, `${deltaT.toFixed(1)} °C`, massFlowText, `Leaving temperature: ${fmtTemp(tEnd)}`);
       }
     }
+  }
+
+  // --- Saved inputs, shareable links & reset ---
+  function currentState() {
+    return {
+      m: medium, s: systemType, d: direction, v: solveMode, bu: batchUnit, fu: flowUnit, tu: timeUnit,
+      q: document.getElementById('system-qty').value,
+      g: document.getElementById('glycol-slider').value,
+      gt: glycolType,
+      ds: ductShape,
+      pd: document.getElementById('pipe-dia').value,
+      dw: document.getElementById('duct-w').value,
+      dh: document.getElementById('duct-h').value,
+      t0: document.getElementById('start-temp').value,
+      dt: document.getElementById('delta-t').value,
+      p: document.getElementById('input-power').value,
+      tt: document.getElementById('input-time').value
+    };
+  }
+
+  function saveState() {
+    try { localStorage.setItem('tth-state', JSON.stringify(currentState())); } catch (e) { /* ignore */ }
+  }
+
+  function pick(value, allowed, fallback) {
+    return allowed.includes(value) ? value : fallback;
+  }
+
+  function applyState(state) {
+    const st = Object.assign({}, DEFAULT_STATE, state);
+    medium = pick(st.m, ['water', 'air'], 'water');
+    systemType = pick(st.s, ['batch', 'flow'], 'batch');
+    direction = pick(st.d, ['heat', 'cool'], 'heat');
+    solveMode = pick(st.v, ['mode1', 'mode2'], 'mode1');
+    batchUnit = pick(st.bu, BATCH_UNITS.map(u => u.id), 'L');
+    flowUnit = pick(st.fu, FLOW_UNITS.map(u => u.id), 'Ls');
+
+    const glycol = String(st.g);
+    document.getElementById('glycol-slider').value = GLYCOLS.eg[glycol] ? glycol : '0';
+    glycolType = pick(st.gt, ['eg', 'pg'], 'eg');
+    ductShape = pick(st.ds, ['round', 'rect'], 'round');
+    const optNum = v => (v !== null && v !== '' && isFinite(parseFloat(v)) && parseFloat(v) > 0) ? parseFloat(v) : '';
+    document.getElementById('pipe-dia').value = optNum(st.pd);
+    document.getElementById('duct-w').value = optNum(st.dw);
+    document.getElementById('duct-h').value = optNum(st.dh);
+    const num = (v, fallback) => (v !== null && v !== '' && isFinite(parseFloat(v))) ? parseFloat(v) : fallback;
+    document.getElementById('start-temp').value = num(st.t0, 20);
+    document.getElementById('delta-t').value = num(st.dt, 20);
+    document.getElementById('input-power').value = num(st.p, 50);
+    document.getElementById('input-time').value = num(st.tt, 3600);
+    if (num(st.q, null) === null) {
+      setDefaultQty();
+    } else {
+      document.getElementById('system-qty').value = num(st.q, 0);
+    }
+
+    updateUIControls();
+    setTimeUnit(pick(st.tu, ['seconds', 'minsec'], 'seconds')); // also recalculates
+  }
+
+  function loadInitialState() {
+    const params = new URLSearchParams(location.search);
+    const keys = Object.keys(DEFAULT_STATE).filter(k => params.has(k));
+    if (keys.length > 0) {
+      const fromUrl = {};
+      keys.forEach(k => { fromUrl[k] = params.get(k); });
+      applyState(fromUrl);
+      history.replaceState(null, '', location.pathname);
+      return;
+    }
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('tth-state') || 'null'); } catch (e) { saved = null; }
+    applyState(saved && typeof saved === 'object' ? saved : {});
+  }
+
+  const SAVED_KEY = 'tth-saved';
+
+  function readSaved() {
+    try {
+      const list = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
+
+  function writeSaved(list) {
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(list));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function saveCalculation() {
+    const nameInput = document.getElementById('save-name');
+    const title = document.getElementById('result-title').textContent;
+    const name = nameInput.value.trim() || `${title} ${new Date().toLocaleString()}`;
+    const entry = {
+      id: Date.now().toString(36),
+      name: name.slice(0, 80),
+      saved: new Date().toISOString(),
+      summary: `${title}: ${document.getElementById('result-primary').innerText}`,
+      state: currentState()
+    };
+    const list = [entry].concat(readSaved()).slice(0, 100);
+    if (!writeSaved(list)) {
+      showToast('Could not save on this device');
+      return;
+    }
+    nameInput.value = '';
+    renderSaved();
+    showToast('Calculation saved');
+  }
+
+  function loadCalculation(id) {
+    const entry = readSaved().find(e => e.id === id);
+    if (!entry) return;
+    applyState(entry.state);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast(`Loaded "${entry.name}"`);
+  }
+
+  function deleteCalculation(id) {
+    const entry = readSaved().find(e => e.id === id);
+    if (!entry || !confirm(`Delete "${entry.name}"?`)) return;
+    writeSaved(readSaved().filter(e => e.id !== id));
+    renderSaved();
+  }
+
+  function renderSaved() {
+    const list = readSaved();
+    const container = document.getElementById('saved-list');
+    container.textContent = '';
+    document.getElementById('saved-count').innerText = list.length ? `(${list.length})` : '';
+    if (list.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'instruction-text';
+      empty.textContent = 'No saved calculations yet. Name the current calculation above and tap Save.';
+      container.appendChild(empty);
+      return;
+    }
+    list.forEach(entry => {
+      const row = document.createElement('div');
+      row.className = 'saved-item';
+
+      const info = document.createElement('div');
+      info.className = 'saved-info';
+      const name = document.createElement('div');
+      name.className = 'saved-name';
+      name.textContent = entry.name;
+      const meta = document.createElement('div');
+      meta.className = 'saved-meta';
+      const when = new Date(entry.saved);
+      meta.textContent = `${entry.summary} • ${isNaN(when) ? '' : when.toLocaleDateString()}`;
+      info.append(name, meta);
+
+      const load = document.createElement('button');
+      load.type = 'button';
+      load.className = 'saved-btn';
+      load.textContent = 'Open';
+      load.onclick = () => loadCalculation(entry.id);
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'saved-btn saved-delete';
+      del.textContent = '🗑';
+      del.setAttribute('aria-label', `Delete ${entry.name}`);
+      del.onclick = () => deleteCalculation(entry.id);
+
+      row.append(info, load, del);
+      container.appendChild(row);
+    });
+  }
+
+  function resetInputs() {
+    applyState({});
+    showToast('Inputs reset');
+  }
+
+  function shareUrl() {
+    const url = new URL(location.pathname, location.origin);
+    const st = currentState();
+    Object.keys(st).forEach(k => url.searchParams.set(k, st[k]));
+    return url.toString();
+  }
+
+  function shareSummary() {
+    const unit = currentUnit().label;
+    const qtyLabel = document.getElementById('qty-label').innerText;
+    const lines = [
+      `${document.getElementById('result-title').textContent}: ${document.getElementById('result-primary').innerText}`,
+      document.getElementById('result-secondary').innerText,
+      document.getElementById('result-tertiary').innerText,
+      '',
+      `${qtyLabel}: ${document.getElementById('system-qty').value} ${unit}`
+    ];
+    if (medium === 'water') lines.push(`Fluid: ${document.getElementById('glycol-val').innerText}`);
+    lines.push(`${document.getElementById('start-temp-label').innerText}: ${fmtTemp(parseFloat(document.getElementById('start-temp').value) || 0)}`);
+    if (!document.getElementById('delta-group').classList.contains('hidden')) {
+      lines.push(`${document.getElementById('delta-label').innerText}: ${document.getElementById('delta-t').value} °C`);
+    }
+    if (!document.getElementById('power-input-group').classList.contains('hidden')) {
+      lines.push(`${document.getElementById('power-label').innerText}: ${document.getElementById('input-power').value} kW`);
+    }
+    if (!document.getElementById('time-input-group').classList.contains('hidden')) {
+      lines.push(`Target Time: ${formatTime(getTargetSeconds())}`);
+    }
+    const velocity = document.getElementById('velocity-result').innerText;
+    if (systemType === 'flow' && velocity.startsWith('Velocity')) lines.push(velocity);
+    return lines.filter((l, i) => l !== '' || i === 3).join('\n');
+  }
+
+  async function shareResult() {
+    const text = shareSummary();
+    const url = shareUrl();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Time to Heat', text, url });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n\n${url}`);
+      showToast('Result copied to clipboard');
+    } catch (e) {
+      showToast('Sharing is not available on this device');
+    }
+  }
+
+  let toastTimer = null;
+  function showToast(message) {
+    const el = document.getElementById('toast');
+    el.innerText = message;
+    el.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.add('hidden'), 2200);
   }
 
   // --- PWA: install instructions & offline support ---
@@ -1091,6 +1697,10 @@
     let dismissed = null;
     try { dismissed = localStorage.getItem('tth-install-dismissed'); } catch (e) { dismissed = null; }
     if (dismissed === '1') return;
+    try {
+      if (sessionStorage.getItem('tth-install-shown') === '1') return;
+      sessionStorage.setItem('tth-install-shown', '1');
+    } catch (e) { /* ignore */ }
     const isPhone = isIOS() || /Android/i.test(navigator.userAgent);
     if (isPhone) showInstallSheet();
   }
@@ -1101,10 +1711,11 @@
     });
   }
 
+
   // Initial UI Setup & Calculation
   initTheme();
-  updateUIControls();
-  calculate();
+  loadInitialState();
+  renderSaved();
   initInstallPrompt();
 </script>
 </body>
