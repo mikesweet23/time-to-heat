@@ -493,6 +493,89 @@
       cursor: pointer;
     }
 
+    .card-title {
+      color: var(--text-main);
+      font-size: 0.95rem;
+    }
+
+    .velocity-badge {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .save-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .save-row input {
+      flex: 1;
+      min-width: 0;
+      background: var(--control-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .save-row input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .saved-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .saved-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--info-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .saved-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .saved-name {
+      color: var(--text-main);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .saved-meta {
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+    }
+
+    .saved-btn {
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .saved-delete {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      padding: 6px 9px;
+    }
+
     .toast {
       position: fixed;
       left: 50%;
@@ -569,11 +652,17 @@
     <div id="water-controls">
       <div class="input-group">
         <div class="input-label">
-          <span>Glycol Ratio</span>
+          <span>Glycol</span>
+          <div class="unit-toggle" role="group" aria-label="Glycol type">
+            <button type="button" id="glycol-type-eg" class="active" onclick="setGlycolType('eg')">Ethylene</button>
+            <button type="button" id="glycol-type-pg" onclick="setGlycolType('pg')">Propylene</button>
+          </div>
+        </div>
+        <div class="input-label" style="justify-content: flex-end; margin-top: -2px;">
           <span class="value" id="glycol-val">0% Glycol</span>
         </div>
         <input type="range" id="glycol-slider" min="0" max="50" step="10" value="0" oninput="calculate()">
-        <div class="instruction-text">Glycol lowers specific heat capacity (c<sub>p</sub>), raises density and lowers the freezing point. Based on ethylene glycol.</div>
+        <div class="instruction-text">Concentration by mass. Glycol lowers specific heat capacity (c<sub>p</sub>), raises density and lowers the freezing point. Propylene is the food-safe, lower-toxicity option.</div>
       </div>
     </div>
 
@@ -645,6 +734,40 @@
     <div id="temp-warning" class="warning hidden"></div>
   </div>
 
+  <!-- PIPE / DUCT VELOCITY CHECK (flow mode) -->
+  <div class="card hidden" id="velocity-card">
+    <div class="input-group">
+      <div class="input-label">
+        <span id="velocity-title" class="card-title">📏 Pipe Velocity Check</span>
+        <div class="unit-toggle" id="duct-shape-toggle" role="group" aria-label="Duct shape">
+          <button type="button" id="duct-shape-round" class="active" onclick="setDuctShape('round')">Round</button>
+          <button type="button" id="duct-shape-rect" onclick="setDuctShape('rect')">Rect</button>
+        </div>
+      </div>
+      <div class="instruction-text" id="size-label">Pipe Internal Diameter</div>
+      <div id="size-round-row" class="minsec-field">
+        <label for="pipe-dia" id="pipe-dia-label">Internal diameter (mm)</label>
+        <input type="number" id="pipe-dia" min="0" step="1" inputmode="decimal" placeholder="e.g. 54" oninput="calculate()">
+      </div>
+      <div id="size-rect-row" class="minsec-row hidden">
+        <div class="minsec-field">
+          <label for="duct-w">Width (mm)</label>
+          <input type="number" id="duct-w" min="0" step="50" inputmode="decimal" placeholder="e.g. 400" oninput="calculate()">
+        </div>
+        <div class="minsec-colon">×</div>
+        <div class="minsec-field">
+          <label for="duct-h">Height (mm)</label>
+          <input type="number" id="duct-h" min="0" step="50" inputmode="decimal" placeholder="e.g. 250" oninput="calculate()">
+        </div>
+      </div>
+    </div>
+    <div class="info-badge velocity-badge">
+      <span class="highlight" id="velocity-result"></span>
+      <span id="velocity-sizing"></span>
+    </div>
+    <div class="instruction-text" id="velocity-guide"></div>
+  </div>
+
   <!-- RESULT DISPLAY -->
   <div class="result-card">
     <div class="result-title" id="result-title">Estimated Heating Time</div>
@@ -657,6 +780,19 @@
     <button type="button" class="btn-secondary" onclick="shareResult()">📤 Share result</button>
     <button type="button" class="btn-secondary" onclick="resetInputs()">↺ Reset</button>
   </div>
+
+  <!-- SAVED CALCULATIONS -->
+  <details id="saved-section">
+    <summary>💾 Saved Calculations <span id="saved-count"></span></summary>
+    <div class="guide-content">
+      <div class="save-row">
+        <input type="text" id="save-name" maxlength="80" placeholder="Name, e.g. Plant room AHU-1" onkeydown="if (event.key === 'Enter') saveCalculation()">
+        <button type="button" class="btn-primary" onclick="saveCalculation()">Save</button>
+      </div>
+      <div id="saved-list" class="saved-list"></div>
+      <p class="instruction-text">Saved on this device only.</p>
+    </div>
+  </details>
 
   <!-- IN-APP QUICK INSTRUCTION GUIDE -->
   <details>
@@ -671,9 +807,10 @@
         <br>• <i>Batch Mode:</i> Calculate time required OR power required (kW). Target time can be entered in seconds or as minutes and seconds.
         <br>• <i>Flow Mode:</i> Calculate power required (kW) for a given flow OR the temperature change (ΔT) a heater or cooler produces.</p>
       <p><b>5. Start Temperature:</b> Density is taken at the start temperature (volumes and flow rates are measured there, so this sets the mass). Specific heat (c<sub>p</sub>) is taken at the mean of the start and end temperatures.</p>
-      <p><b>6. Share &amp; Save:</b> Your last inputs are remembered. <i>Share result</i> sends a summary with a link that reopens the same calculation.</p>
-      <p><b>7. Display:</b> Switch Day or Night mode from the top of the app.</p>
-      <p><b>8. Install:</b> Add the app to your home screen to open it full screen and use it offline.
+      <p><b>6. Velocity Check:</b> In Flow mode, enter a pipe internal diameter or duct size to see the velocity, plus the smallest size that keeps it within typical limits.</p>
+      <p><b>7. Share &amp; Save:</b> Your last inputs are remembered. <i>Share result</i> sends a summary with a link that reopens the same calculation. <i>Saved Calculations</i> keeps a named list of jobs on this device.</p>
+      <p><b>8. Display:</b> Switch Day or Night mode from the top of the app.</p>
+      <p><b>9. Install:</b> Add the app to your home screen to open it full screen and use it offline.
         <br><button type="button" class="install-link" onclick="showInstallSheet()">📲 Show install instructions</button></p>
     </div>
   </details>
@@ -733,6 +870,8 @@
   let batchUnit = 'L';      // see BATCH_UNITS
   let flowUnit = 'Ls';      // see FLOW_UNITS
   let timeUnit = 'seconds'; // 'seconds' | 'minsec'
+  let glycolType = 'eg';    // 'eg' | 'pg'
+  let ductShape = 'round';  // 'round' | 'rect'
 
   // Quantities are handled internally in litres (batch) and L/s (flow).
   const BATCH_UNITS = [
@@ -745,22 +884,55 @@
     { id: 'm3s', label: 'm³/s', factor: 1000 }
   ];
 
-  // Ethylene glycol mixes (by mass): properties at 20 °C, linear temperature slopes
-  // per °C, and approximate freezing points. Pure water uses the correlations below.
-  const glycolData = {
-    0:  { cp: 4.186, density: 1.000, cpSlope: 0,      rhoSlope: 0,         freeze: 0,     name: "0% Glycol (Pure Water)" },
-    10: { cp: 4.050, density: 1.012, cpSlope: 0.0010, rhoSlope: -0.00024, freeze: -3.4,  name: "10% Glycol Mix" },
-    20: { cp: 3.880, density: 1.026, cpSlope: 0.0020, rhoSlope: -0.00028, freeze: -7.9,  name: "20% Glycol Mix" },
-    30: { cp: 3.700, density: 1.040, cpSlope: 0.0030, rhoSlope: -0.00032, freeze: -14.1, name: "30% Glycol Mix" },
-    40: { cp: 3.500, density: 1.055, cpSlope: 0.0040, rhoSlope: -0.00036, freeze: -22.3, name: "40% Glycol Mix" },
-    50: { cp: 3.300, density: 1.070, cpSlope: 0.0050, rhoSlope: -0.00040, freeze: -33.8, name: "50% Glycol Mix" }
+  // Glycol mixes (by mass): properties at 20 °C, linear temperature slopes per °C,
+  // and approximate freezing points. Pure water (0%) uses the correlations below.
+  const GLYCOLS = {
+    eg: {
+      name: 'Ethylene',
+      10: { cp: 4.050, density: 1.012, cpSlope: 0.0010, rhoSlope: -0.00024, freeze: -3.4 },
+      20: { cp: 3.880, density: 1.026, cpSlope: 0.0020, rhoSlope: -0.00028, freeze: -7.9 },
+      30: { cp: 3.700, density: 1.040, cpSlope: 0.0030, rhoSlope: -0.00032, freeze: -14.1 },
+      40: { cp: 3.500, density: 1.055, cpSlope: 0.0040, rhoSlope: -0.00036, freeze: -22.3 },
+      50: { cp: 3.300, density: 1.070, cpSlope: 0.0050, rhoSlope: -0.00040, freeze: -33.8 }
+    },
+    pg: {
+      name: 'Propylene',
+      10: { cp: 4.080, density: 1.008, cpSlope: 0.0010, rhoSlope: -0.00024, freeze: -3.3 },
+      20: { cp: 4.000, density: 1.017, cpSlope: 0.0015, rhoSlope: -0.00030, freeze: -7.1 },
+      30: { cp: 3.880, density: 1.026, cpSlope: 0.0025, rhoSlope: -0.00036, freeze: -12.7 },
+      40: { cp: 3.730, density: 1.034, cpSlope: 0.0030, rhoSlope: -0.00042, freeze: -21.1 },
+      50: { cp: 3.560, density: 1.041, cpSlope: 0.0035, rhoSlope: -0.00050, freeze: -33.5 }
+    }
+  };
+
+  function glycolPct() {
+    const pct = document.getElementById('glycol-slider').value;
+    return GLYCOLS.eg[pct] ? pct : '0';
+  }
+
+  // null for pure water
+  function glycolMix() {
+    const pct = glycolPct();
+    return pct === '0' ? null : GLYCOLS[glycolType][pct];
+  }
+
+  function glycolName() {
+    const pct = glycolPct();
+    return pct === '0' ? '0% Glycol (Pure Water)' : `${pct}% ${GLYCOLS[glycolType].name} Glycol`;
+  }
+
+  // Typical design velocity ranges (m/s), for guidance only.
+  const VELOCITY_GUIDE = {
+    water: { lo: 0.5, hi: 1.5, sizeFor: 1.5, text: 'typical 0.5–1.5 m/s for heating/chilled water pipework' },
+    air:   { lo: 2.5, hi: 6.0, sizeFor: 5.0, text: 'typical 2.5–6 m/s for low-velocity ductwork' }
   };
 
   const AIR_CP = 1.005; // kJ/kg·°C
 
   const DEFAULT_STATE = {
     m: 'water', s: 'batch', d: 'heat', v: 'mode1', bu: 'L', fu: 'Ls', tu: 'seconds',
-    q: null, g: '0', t0: '20', dt: '20', p: '50', tt: '3600'
+    q: null, g: '0', gt: 'eg', t0: '20', dt: '20', p: '50', tt: '3600',
+    ds: 'round', pd: '', dw: '', dh: ''
   };
 
   function clamp(x, lo, hi) { return Math.min(hi, Math.max(lo, x)); }
@@ -793,9 +965,8 @@
       const kgM3 = 353.0 / (Math.max(T, -200) + 273.15);
       return { density: kgM3 / 1000, cp: AIR_CP };
     }
-    const pct = document.getElementById('glycol-slider').value;
-    if (pct === '0') return waterProps(T);
-    const d = glycolData[pct];
+    const d = glycolMix();
+    if (!d) return waterProps(T);
     const t = clamp(T, -40, 120);
     return {
       density: d.density + d.rhoSlope * (t - 20),
@@ -869,6 +1040,18 @@
     calculate();
   }
 
+  function setGlycolType(type) {
+    glycolType = type === 'pg' ? 'pg' : 'eg';
+    updateUIControls();
+    calculate();
+  }
+
+  function setDuctShape(shape) {
+    ductShape = shape === 'rect' ? 'rect' : 'round';
+    updateUIControls();
+    calculate();
+  }
+
   function setSolveMode(mode) {
     solveMode = mode;
     updateUIControls();
@@ -938,6 +1121,21 @@
     document.getElementById('btn-dir-cool').classList.toggle('active', !heating);
     document.getElementById('btn-solve-1').classList.toggle('active', solveMode === 'mode1');
     document.getElementById('btn-solve-2').classList.toggle('active', solveMode === 'mode2');
+    document.getElementById('glycol-type-eg').classList.toggle('active', glycolType === 'eg');
+    document.getElementById('glycol-type-pg').classList.toggle('active', glycolType === 'pg');
+
+    // Pipe / duct velocity check (flow mode only)
+    const air = medium === 'air';
+    const rect = air && ductShape === 'rect';
+    document.getElementById('velocity-card').classList.toggle('hidden', systemType !== 'flow');
+    document.getElementById('velocity-title').innerText = air ? '📏 Duct Velocity Check' : '📏 Pipe Velocity Check';
+    document.getElementById('duct-shape-toggle').classList.toggle('hidden', !air);
+    document.getElementById('duct-shape-round').classList.toggle('active', !rect);
+    document.getElementById('duct-shape-rect').classList.toggle('active', rect);
+    document.getElementById('size-round-row').classList.toggle('hidden', rect);
+    document.getElementById('size-rect-row').classList.toggle('hidden', !rect);
+    document.getElementById('size-label').innerText = air ? 'Duct Size' : 'Pipe Internal Diameter';
+    document.getElementById('pipe-dia-label').innerText = air ? 'Diameter (mm)' : 'Internal diameter (mm)';
 
     // Quantity unit buttons
     const units = unitList();
@@ -1031,12 +1229,12 @@
     const hi = Math.max(tStart, tEnd);
     const msgs = [];
     if (medium === 'water') {
-      const pct = document.getElementById('glycol-slider').value;
-      const freeze = glycolData[pct].freeze;
+      const mix = glycolMix();
+      const freeze = mix ? mix.freeze : 0;
       if (lo < freeze) {
-        msgs.push(pct === '0'
+        msgs.push(!mix
           ? `⚠️ ${fmtTemp(lo)} is below 0 °C — water would freeze. Add glycol for sub-zero temperatures.`
-          : `⚠️ ${fmtTemp(lo)} is below the ~${freeze} °C freezing point of a ${pct}% glycol mix.`);
+          : `⚠️ ${fmtTemp(lo)} is below the ~${freeze} °C freezing point of ${glycolName().toLowerCase()}.`);
       }
       if (hi > 100) {
         msgs.push(`⚠️ Above 100 °C assumes a pressurised system; fluid properties are extrapolated.`);
@@ -1047,6 +1245,46 @@
     const el = document.getElementById('temp-warning');
     el.innerText = msgs.join('\n');
     el.classList.toggle('hidden', msgs.length === 0);
+  }
+
+  function updateVelocity(flowLs) {
+    if (systemType !== 'flow') return;
+    const guide = VELOCITY_GUIDE[medium];
+    const flowM3s = flowLs / 1000;
+    let areaM2 = 0;
+    if (medium === 'air' && ductShape === 'rect') {
+      const w = parseFloat(document.getElementById('duct-w').value) || 0;
+      const h = parseFloat(document.getElementById('duct-h').value) || 0;
+      areaM2 = (w / 1000) * (h / 1000);
+    } else {
+      const dia = parseFloat(document.getElementById('pipe-dia').value) || 0;
+      areaM2 = Math.PI * Math.pow(dia / 1000, 2) / 4;
+    }
+
+    const resultEl = document.getElementById('velocity-result');
+    if (areaM2 > 0 && flowM3s > 0) {
+      const v = flowM3s / areaM2;
+      let verdict = '✅ within the typical range';
+      if (v > guide.hi) verdict = medium === 'air' ? '⚠️ high – risk of noise and pressure drop' : '⚠️ high – risk of noise, erosion and pressure drop';
+      else if (v < guide.lo) verdict = '⚠️ low – the size could be reduced';
+      resultEl.innerText = `Velocity: ${v.toFixed(2)} m/s — ${verdict}`;
+    } else {
+      resultEl.innerText = medium === 'air' ? 'Enter a duct size to check the air velocity.' : 'Enter a pipe size to check the water velocity.';
+    }
+
+    // Smallest size that keeps velocity at or below the sizing velocity.
+    let sizeText = '';
+    if (flowM3s > 0) {
+      const minArea = flowM3s / guide.sizeFor;
+      const minDia = Math.sqrt(4 * minArea / Math.PI) * 1000;
+      sizeText = `For ${guide.sizeFor} m/s: ≥ ${Math.ceil(minDia)} mm ${medium === 'air' ? 'round duct' : 'internal diameter'}`;
+      if (medium === 'air') {
+        sizeText += ` or ≥ ${fmtNum(roundSig(minArea, 3), 3)} m² free area (e.g. ${Math.ceil(Math.sqrt(minArea * 2) * 1000)} × ${Math.ceil(Math.sqrt(minArea / 2) * 1000)} mm)`;
+      }
+      sizeText += '.';
+    }
+    document.getElementById('velocity-sizing').innerText = sizeText;
+    document.getElementById('velocity-guide').innerText = `Guide: ${guide.text}.`;
   }
 
   function setResult(title, primary, secondary, tertiary) {
@@ -1070,9 +1308,10 @@
     let deltaT = Math.abs(parseFloat(document.getElementById('delta-t').value) || 0);
 
     updateQtyEquivalents(qty);
+    updateVelocity(qty);
 
     if (medium === 'water') {
-      document.getElementById('glycol-val').innerText = glycolData[document.getElementById('glycol-slider').value].name;
+      document.getElementById('glycol-val').innerText = glycolName();
     }
 
     // Density at the start/entering temperature fixes the mass (volume is measured there).
@@ -1170,6 +1409,11 @@
       m: medium, s: systemType, d: direction, v: solveMode, bu: batchUnit, fu: flowUnit, tu: timeUnit,
       q: document.getElementById('system-qty').value,
       g: document.getElementById('glycol-slider').value,
+      gt: glycolType,
+      ds: ductShape,
+      pd: document.getElementById('pipe-dia').value,
+      dw: document.getElementById('duct-w').value,
+      dh: document.getElementById('duct-h').value,
       t0: document.getElementById('start-temp').value,
       dt: document.getElementById('delta-t').value,
       p: document.getElementById('input-power').value,
@@ -1195,7 +1439,13 @@
     flowUnit = pick(st.fu, FLOW_UNITS.map(u => u.id), 'Ls');
 
     const glycol = String(st.g);
-    document.getElementById('glycol-slider').value = glycolData[glycol] ? glycol : '0';
+    document.getElementById('glycol-slider').value = GLYCOLS.eg[glycol] ? glycol : '0';
+    glycolType = pick(st.gt, ['eg', 'pg'], 'eg');
+    ductShape = pick(st.ds, ['round', 'rect'], 'round');
+    const optNum = v => (v !== null && v !== '' && isFinite(parseFloat(v)) && parseFloat(v) > 0) ? parseFloat(v) : '';
+    document.getElementById('pipe-dia').value = optNum(st.pd);
+    document.getElementById('duct-w').value = optNum(st.dw);
+    document.getElementById('duct-h').value = optNum(st.dh);
     const num = (v, fallback) => (v !== null && v !== '' && isFinite(parseFloat(v))) ? parseFloat(v) : fallback;
     document.getElementById('start-temp').value = num(st.t0, 20);
     document.getElementById('delta-t').value = num(st.dt, 20);
@@ -1226,6 +1476,103 @@
     applyState(saved && typeof saved === 'object' ? saved : {});
   }
 
+  const SAVED_KEY = 'tth-saved';
+
+  function readSaved() {
+    try {
+      const list = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
+
+  function writeSaved(list) {
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(list));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function saveCalculation() {
+    const nameInput = document.getElementById('save-name');
+    const title = document.getElementById('result-title').textContent;
+    const name = nameInput.value.trim() || `${title} ${new Date().toLocaleString()}`;
+    const entry = {
+      id: Date.now().toString(36),
+      name: name.slice(0, 80),
+      saved: new Date().toISOString(),
+      summary: `${title}: ${document.getElementById('result-primary').innerText}`,
+      state: currentState()
+    };
+    const list = [entry].concat(readSaved()).slice(0, 100);
+    if (!writeSaved(list)) {
+      showToast('Could not save on this device');
+      return;
+    }
+    nameInput.value = '';
+    renderSaved();
+    showToast('Calculation saved');
+  }
+
+  function loadCalculation(id) {
+    const entry = readSaved().find(e => e.id === id);
+    if (!entry) return;
+    applyState(entry.state);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast(`Loaded "${entry.name}"`);
+  }
+
+  function deleteCalculation(id) {
+    const entry = readSaved().find(e => e.id === id);
+    if (!entry || !confirm(`Delete "${entry.name}"?`)) return;
+    writeSaved(readSaved().filter(e => e.id !== id));
+    renderSaved();
+  }
+
+  function renderSaved() {
+    const list = readSaved();
+    const container = document.getElementById('saved-list');
+    container.textContent = '';
+    document.getElementById('saved-count').innerText = list.length ? `(${list.length})` : '';
+    if (list.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'instruction-text';
+      empty.textContent = 'No saved calculations yet. Name the current calculation above and tap Save.';
+      container.appendChild(empty);
+      return;
+    }
+    list.forEach(entry => {
+      const row = document.createElement('div');
+      row.className = 'saved-item';
+
+      const info = document.createElement('div');
+      info.className = 'saved-info';
+      const name = document.createElement('div');
+      name.className = 'saved-name';
+      name.textContent = entry.name;
+      const meta = document.createElement('div');
+      meta.className = 'saved-meta';
+      const when = new Date(entry.saved);
+      meta.textContent = `${entry.summary} • ${isNaN(when) ? '' : when.toLocaleDateString()}`;
+      info.append(name, meta);
+
+      const load = document.createElement('button');
+      load.type = 'button';
+      load.className = 'saved-btn';
+      load.textContent = 'Open';
+      load.onclick = () => loadCalculation(entry.id);
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'saved-btn saved-delete';
+      del.textContent = '🗑';
+      del.setAttribute('aria-label', `Delete ${entry.name}`);
+      del.onclick = () => deleteCalculation(entry.id);
+
+      row.append(info, load, del);
+      container.appendChild(row);
+    });
+  }
+
   function resetInputs() {
     applyState({});
     showToast('Inputs reset');
@@ -1242,7 +1589,7 @@
     const unit = currentUnit().label;
     const qtyLabel = document.getElementById('qty-label').innerText;
     const lines = [
-      `${document.getElementById('result-title').innerText}: ${document.getElementById('result-primary').innerText}`,
+      `${document.getElementById('result-title').textContent}: ${document.getElementById('result-primary').innerText}`,
       document.getElementById('result-secondary').innerText,
       document.getElementById('result-tertiary').innerText,
       '',
@@ -1259,6 +1606,8 @@
     if (!document.getElementById('time-input-group').classList.contains('hidden')) {
       lines.push(`Target Time: ${formatTime(getTargetSeconds())}`);
     }
+    const velocity = document.getElementById('velocity-result').innerText;
+    if (systemType === 'flow' && velocity.startsWith('Velocity')) lines.push(velocity);
     return lines.filter((l, i) => l !== '' || i === 3).join('\n');
   }
 
@@ -1366,6 +1715,7 @@
   // Initial UI Setup & Calculation
   initTheme();
   loadInitialState();
+  renderSaved();
   initInstallPrompt();
 </script>
 </body>
