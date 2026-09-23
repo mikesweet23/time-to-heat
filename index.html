@@ -209,6 +209,18 @@
       outline: none;
     }
 
+    /* Hide the up/down spinner arrows on number fields */
+    input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
     input[type="number"]:focus, select:focus {
       border-color: var(--accent-blue);
     }
@@ -1711,6 +1723,19 @@
     });
   }
 
+
+  // Stop the mouse wheel / trackpad scroll from changing a focused number field.
+  // The field loses focus instead, so the page scrolls and the value stays put.
+  document.addEventListener('wheel', (e) => {
+    const el = document.activeElement;
+    if (el && el.type === 'number' && e.target === el) el.blur();
+  }, { passive: true });
+
+  // Block the arrow-key step too, so values only change when typed.
+  document.addEventListener('keydown', (e) => {
+    const el = e.target;
+    if (el && el.type === 'number' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) e.preventDefault();
+  });
 
   // Initial UI Setup & Calculation
   initTheme();
