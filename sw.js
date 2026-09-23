@@ -1,5 +1,5 @@
 // Offline cache for Time to Heat. Bump CACHE when shipped files change.
-const CACHE = 'tth-v1';
+const CACHE = 'tth-v2';
 const ASSETS = [
   './',
   './index.html',
